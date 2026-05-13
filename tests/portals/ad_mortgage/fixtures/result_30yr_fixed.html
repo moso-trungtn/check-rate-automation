@@ -1,0 +1,530 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="logo192.png" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content=" 
+      script-src 'unsafe-inline' 'unsafe-eval' 'self' blob: https://www.googletagmanager.com static.hotjar.com https://www.google-analytics.com https://script.hotjar.com https://us01ccistatic.zoom.us *.visualwebsiteoptimizer.com app.vwo.com;
+      img-src * 'self' data: https://brokercrm.admortgage.com *.visualwebsiteoptimizer.com app.vwo.com useruploads.vwo.io; 
+    "
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="title" content="" />
+    <meta name="description" content="This is AD Mortgage Portal 2.0" />
+    <link rel="preload" as="font" href="/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-regular.woff2" type="font/woff2" crossorigin />
+    <link rel="preload" as="font" href="/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-500.woff2" type="font/woff2" crossorigin />
+    <link rel="preload" as="font" href="/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-600.woff2" type="font/woff2" crossorigin />
+    <link rel="preload" as="font" href="/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-700.woff2" type="font/woff2" crossorigin />
+    <link rel="preload" as="font" href="/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-900.woff2" type="font/woff2" crossorigin />
+    <title>Loading...</title>
+    <script src="/config.js"></script>
+    <style>
+      /* montserrat-regular - cyrillic_cyrillic-ext_latin_latin-ext_vietnamese */
+      @font-face {
+        font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+        font-family: 'Montserrat';
+        font-style: normal;
+        font-weight: 400;
+        src: url('/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-regular.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+      }
+      /* montserrat-500 - cyrillic_cyrillic-ext_latin_latin-ext_vietnamese */
+      @font-face {
+        font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+        font-family: 'Montserrat';
+        font-style: normal;
+        font-weight: 500;
+        src: url('/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-500.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+      }
+      /* montserrat-600 - cyrillic_cyrillic-ext_latin_latin-ext_vietnamese */
+      @font-face {
+        font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+        font-family: 'Montserrat';
+        font-style: normal;
+        font-weight: 600;
+        src: url('/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-600.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+      }
+      /* montserrat-700 - cyrillic_cyrillic-ext_latin_latin-ext_vietnamese */
+      @font-face {
+        font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+        font-family: 'Montserrat';
+        font-style: normal;
+        font-weight: 700;
+        src: url('/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-700.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+      }
+      /* montserrat-900 - cyrillic_cyrillic-ext_latin_latin-ext_vietnamese */
+      @font-face {
+        font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+        font-family: 'Montserrat';
+        font-style: normal;
+        font-weight: 900;
+        src: url('/fonts/montserrat-v30-cyrillic_cyrillic-ext_latin_latin-ext_vietnamese-900.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+      }
+    </style>
+    <script>
+      window.__AIM_ENV__ = (window.__APP_CONFIG__?.REACT_APP_AIM_ENV ?? '').toLowerCase();
+    </script>
+
+    <script>
+      if (window.__AIM_ENV__ === 'prod') {
+        (function (w, d, s, l, i) {
+          w[l] = w[l] || [];
+          w[l].push({
+            'gtm.start': new Date().getTime(),
+            event: 'gtm.js',
+          });
+          var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l != 'dataLayer' ? '&l=' + l : '';
+          j.async = true;
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+          f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-K7474B9N');
+
+        (function (h, o, t, j, a, r) {
+          h.hj =
+            h.hj ||
+            function () {
+              (h.hj.q = h.hj.q || []).push(arguments);
+            };
+          h._hjSettings = { hjid: 3782189, hjsv: 6 };
+          a = o.getElementsByTagName('head')[0];
+          r = o.createElement('script');
+          r.async = 1;
+          r.src = t + h._hjSettings.hjid + j + h._hjSettings.hjsv;
+          a.appendChild(r);
+        })(window, document, 'https://static.hotjar.com/c/hotjar-', '.js?sv=');
+      }
+
+      if (window.__AIM_ENV__ === 'stg') {
+        (function (h, o, t, j, a, r) {
+          h.hj =
+            h.hj ||
+            function () {
+              (h.hj.q = h.hj.q || []).push(arguments);
+            };
+          h._hjSettings = { hjid: 5044372, hjsv: 6 };
+          a = o.getElementsByTagName('head')[0];
+          r = o.createElement('script');
+          r.async = 1;
+          r.src = t + h._hjSettings.hjid + j + h._hjSettings.hjsv;
+          a.appendChild(r);
+        })(window, document, 'https://static.hotjar.com/c/hotjar-', '.js?sv=');
+      }
+
+      if (window.__AIM_ENV__?.startsWith('dev')) {
+        (function (h, o, t, j, a, r) {
+          h.hj =
+            h.hj ||
+            function () {
+              (h.hj.q = h.hj.q || []).push(arguments);
+            };
+          h._hjSettings = { hjid: 5067689, hjsv: 6 };
+          a = o.getElementsByTagName('head')[0];
+          r = o.createElement('script');
+          r.async = 1;
+          r.src = t + h._hjSettings.hjid + j + h._hjSettings.hjsv;
+          a.appendChild(r);
+        })(window, document, 'https://static.hotjar.com/c/hotjar-', '.js?sv=');
+      }
+    </script>
+    <script src="https://us01ccistatic.zoom.us/us01cci/web-sdk/video-client.js"></script>
+    <script>
+      var syncStylesEl = document.createElement('style');
+      syncStylesEl.type = 'text/css';
+      document.head.insertBefore(syncStylesEl, document.head.children[0]);
+
+      var syncHotJarStylesTimeout;
+      function debouncedSyncHotJarStyles() {
+        var later = function () {
+          var styleNodes = [].slice.call(document.querySelectorAll('head [data-styled-components]'));
+          if (!styleNodes.length) {
+            return;
+          }
+          var styles = styleNodes
+            .map(({ sheet }) =>
+              [].slice
+                .call(sheet.cssRules)
+                .map((rule) => rule.cssText)
+                .join(' '),
+            )
+            .join(' ');
+          syncStylesEl.textContent = styles;
+        };
+        clearTimeout(syncHotJarStylesTimeout);
+        syncHotJarStylesTimeout = setTimeout(later, 1000);
+      }
+
+      var originalInsertRule = CSSStyleSheet.prototype.insertRule;
+      CSSStyleSheet.prototype.insertRule = function (style, index) {
+        originalInsertRule.call(this, style, index);
+        if (window.hj && window.hj.settings && window.hj.settings.record) {
+          debouncedSyncHotJarStyles();
+        }
+      };
+    </script>
+    <!-- Start VWO Async SmartCode -->
+    <link rel="preconnect" href="https://dev.visualwebsiteoptimizer.com" />
+    <script type="text/javascript" id="vwoCode">
+      if (window.__AIM_ENV__ === 'prod' || window.__AIM_ENV__ === 'stg') {
+        window._vwo_code ||
+          (function () {
+            var account_id = 760475,
+              version = 2.1,
+              settings_tolerance = 2000,
+              hide_element = 'body',
+              hide_element_style = 'opacity:0 !important;filter:alpha(opacity=0) !important;background:none !important;transition:none !important;',
+              /* DO NOT EDIT BELOW THIS LINE */
+              f = false,
+              w = window,
+              d = document,
+              v = d.querySelector('#vwoCode'),
+              cK = '_vwo_' + account_id + '_settings',
+              cc = {};
+            try {
+              var c = JSON.parse(localStorage.getItem('_vwo_' + account_id + '_config'));
+              cc = c && typeof c === 'object' ? c : {};
+            } catch (e) {}
+            var stT = cc.stT === 'session' ? w.sessionStorage : w.localStorage;
+            code = {
+              use_existing_jquery: function () {
+                return typeof use_existing_jquery !== 'undefined' ? use_existing_jquery : undefined;
+              },
+              library_tolerance: function () {
+                return typeof library_tolerance !== 'undefined' ? library_tolerance : undefined;
+              },
+              settings_tolerance: function () {
+                return cc.sT || settings_tolerance;
+              },
+              hide_element_style: function () {
+                return '{' + (cc.hES || hide_element_style) + '}';
+              },
+              hide_element: function () {
+                if (performance.getEntriesByName('first-contentful-paint')[0]) {
+                  return '';
+                }
+                return typeof cc.hE === 'string' ? cc.hE : hide_element;
+              },
+              getVersion: function () {
+                return version;
+              },
+              finish: function (e) {
+                if (!f) {
+                  f = true;
+                  var t = d.getElementById('_vis_opt_path_hides');
+                  if (t) t.parentNode.removeChild(t);
+                  if (e) new Image().src = 'https://dev.visualwebsiteoptimizer.com/ee.gif?a=' + account_id + e;
+                }
+              },
+              finished: function () {
+                return f;
+              },
+              addScript: function (e) {
+                var t = d.createElement('script');
+                t.type = 'text/javascript';
+                if (e.src) {
+                  t.src = e.src;
+                } else {
+                  t.text = e.text;
+                }
+                d.getElementsByTagName('head')[0].appendChild(t);
+              },
+              load: function (e, t) {
+                var i = this.getSettings(),
+                  n = d.createElement('script'),
+                  r = this;
+                t = t || {};
+                if (i) {
+                  n.textContent = i;
+                  d.getElementsByTagName('head')[0].appendChild(n);
+                  if (!w.VWO || VWO.caE) {
+                    stT.removeItem(cK);
+                    r.load(e);
+                  }
+                } else {
+                  var o = new XMLHttpRequest();
+                  o.open('GET', e, true);
+                  o.withCredentials = !t.dSC;
+                  o.responseType = t.responseType || 'text';
+                  o.onload = function () {
+                    if (t.onloadCb) {
+                      return t.onloadCb(o, e);
+                    }
+                    if (o.status === 200 || o.status === 304) {
+                      _vwo_code.addScript({ text: o.responseText });
+                    } else {
+                      _vwo_code.finish('&e=loading_failure:' + e);
+                    }
+                  };
+                  o.onerror = function () {
+                    if (t.onerrorCb) {
+                      return t.onerrorCb(e);
+                    }
+                    _vwo_code.finish('&e=loading_failure:' + e);
+                  };
+                  o.send();
+                }
+              },
+              getSettings: function () {
+                try {
+                  var e = stT.getItem(cK);
+                  if (!e) {
+                    return;
+                  }
+                  e = JSON.parse(e);
+                  if (Date.now() > e.e) {
+                    stT.removeItem(cK);
+                    return;
+                  }
+                  return e.s;
+                } catch (e) {
+                  return;
+                }
+              },
+              init: function () {
+                if (d.URL.indexOf('__vwo_disable__') > -1) return;
+                var e = this.settings_tolerance();
+                w._vwo_settings_timer = setTimeout(function () {
+                  _vwo_code.finish();
+                  stT.removeItem(cK);
+                }, e);
+                var t;
+                if (this.hide_element() !== 'body') {
+                  t = d.createElement('style');
+                  var i = this.hide_element(),
+                    n = i ? i + this.hide_element_style() : '',
+                    r = d.getElementsByTagName('head')[0];
+                  t.setAttribute('id', '_vis_opt_path_hides');
+                  v && t.setAttribute('nonce', v.nonce);
+                  t.setAttribute('type', 'text/css');
+                  if (t.styleSheet) t.styleSheet.cssText = n;
+                  else t.appendChild(d.createTextNode(n));
+                  r.appendChild(t);
+                } else {
+                  t = d.getElementsByTagName('head')[0];
+                  var n = d.createElement('div');
+                  n.style.cssText =
+                    'z-index: 2147483647 !important;position: fixed !important;left: 0 !important;top: 0 !important;width: 100% !important;height: 100% !important;background: white !important;';
+                  n.setAttribute('id', '_vis_opt_path_hides');
+                  n.classList.add('_vis_hide_layer');
+                  t.parentNode.insertBefore(n, t.nextSibling);
+                }
+                var o = window._vis_opt_url || d.URL,
+                  s = 'https://dev.visualwebsiteoptimizer.com/j.php?a=' + account_id + '&u=' + encodeURIComponent(o) + '&vn=' + version;
+                if (w.location.search.indexOf('_vwo_xhr') !== -1) {
+                  this.addScript({ src: s });
+                } else {
+                  this.load(s + '&x=true');
+                }
+              },
+            };
+            w._vwo_code = code;
+            code.init();
+          })();
+      }
+    </script>
+
+    <!-- End VWO Async SmartCode -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2048-2732-CmZ9avyl.jpg"
+      media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2732-2048-D0RNNcpG.jpg"
+      media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1668-2388-BAGvKD_H.jpg"
+      media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2388-1668-DZR8zpg_.jpg"
+      media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1536-2048-CScGmmE7.jpg"
+      media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2048-1536-CIgeW1KP.jpg"
+      media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1488-2266-CLMI4Bwz.jpg"
+      media="(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2266-1488-f3THg9Z4.jpg"
+      media="(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1640-2360-jN9M8b8F.jpg"
+      media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2360-1640-bf1sN_66.jpg"
+      media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1668-2224-mx_ORe7a.jpg"
+      media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2224-1668-BwVjLDre.jpg"
+      media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1620-2160-Bps81VWX.jpg"
+      media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2160-1620-CDKyOeoW.jpg"
+      media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1320-2868-QWf2Qrko.jpg"
+      media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2868-1320-DEivmee-.jpg"
+      media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1206-2622-C7_3TlT9.jpg"
+      media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2622-1206-Dn6b54Vg.jpg"
+      media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1290-2796-CMccHDPh.jpg"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2796-1290-ru5lXOfW.jpg"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1179-2556-DaHDGi-y.jpg"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2556-1179-Aq2ZPFSI.jpg"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1284-2778-RNCqECbu.jpg"
+      media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2778-1284-CsswvtRH.jpg"
+      media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1170-2532-CcgkR9gx.jpg"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2532-1170-CjxuFDLs.jpg"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1125-2436-SJvw7k4v.jpg"
+      media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2436-1125-Bojk0f5R.jpg"
+      media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1242-2688-B0LzYZ9A.jpg"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2688-1242-Cl5696TA.jpg"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-828-1792-C-PqhmsB.jpg"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1792-828-BEbXjJMg.jpg"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1242-2208-BdosAW-7.jpg"
+      media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-2208-1242-KgixBEBg.jpg"
+      media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-750-1334-CWF3x5UU.jpg"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1334-750-K8FzxIVk.jpg"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-640-1136-BL2kZXl0.jpg"
+      media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/assets/apple-splash-1136-640-CEsTx3vL.jpg"
+      media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+    />
+    <script type="module" crossorigin src="/assets/index-DXL-2oUm.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-COGapci0.css">
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
