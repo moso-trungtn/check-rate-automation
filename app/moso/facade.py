@@ -37,6 +37,12 @@ class MosoFacade:
                     adjustments=list(r.adjustments),
                 )
         aliases = sorted({r.alias for r in rows})
+        if not aliases:
+            raise LenderAliasNotFound(
+                "MOSO returned 0 rows — almost certainly an expired or invalid "
+                "session. Refresh data/moso-headers.json by copying a fresh "
+                "GetRatesOp request from DevTools (Network tab → Copy as cURL)."
+            )
         if expected_alias in aliases:
             # Alias matched but the rate didn't. Surface the available rates
             # so the caller can correct their pick.
@@ -46,6 +52,6 @@ class MosoFacade:
                 f"Available rates: {[str(r) for r in available]}"
             )
         raise LenderAliasNotFound(
-            f"No row in GetRatesOp for alias={expected_alias!r} rate={scenario.target_rate}. "
+            f"MOSO returned rows but none for lender {expected_alias!r}. "
             f"Got aliases: {aliases}"
         )
