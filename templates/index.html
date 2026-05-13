@@ -7,59 +7,312 @@
   <script src="/static/htmx.min.js"></script>
 </head>
 <body>
+<div class="app">
+
+<header class="app-header">
   <h1>check-rate</h1>
+  <div class="tagline">MOSO ↔ lender portal pricing diff</div>
+</header>
 
-  <form id="scenario-form">
-    <label>Lender:
-      <select name="lender">
-        <option value="ad_mortgage">AD Mortgage</option>
-      </select>
-    </label>
-    <label>Loan amount: <input type="number" name="loan_amount" value="400000" required></label>
-    <label>Credit score: <input type="number" name="credit_score" value="740" required></label>
-    <label>Property value: <input type="number" name="property_value" value="500000" required></label>
-    <label>LTV: <input type="number" step="0.01" name="ltv" value="80" required></label>
-    <label>Occupancy:
-      <select name="occupancy">
-        <option value="primary_residence">Primary</option>
-        <option value="second_home">Second home</option>
-        <option value="investment">Investment</option>
-      </select>
-    </label>
-    <label>Property type:
-      <select name="property_type">
-        <option value="single_family">SFR</option>
-        <option value="condo">Condo</option>
-        <option value="pud">PUD</option>
-        <option value="2_to_4_unit">2-4 unit</option>
-      </select>
-    </label>
-    <label>Purpose:
-      <select name="purpose">
-        <option value="purchase">Purchase</option>
-        <option value="refinance">Refi</option>
-        <option value="cashout">Cash-out</option>
-      </select>
-    </label>
-    <label>Program: <input type="text" name="loan_program" value="30yr Fixed Conv"></label>
-    <input type="hidden" name="loan_type" value="conventional">
-    <label>Target rate: <input type="number" step="0.001" name="target_rate" value="6.875" required></label>
-    <button id="compare-btn" type="button" onclick="startCompare()">Compare</button>
-  </form>
+<div class="grid">
 
-  <div id="progress"></div>
-  <div id="mfa-modal" hidden>
-    <p>MFA required for <span id="mfa-lender"></span></p>
-    <input id="mfa-code" type="text" autocomplete="one-time-code">
-    <button onclick="submitMfa()">Submit code</button>
+  <!-- LEFT: scenario form + progress -->
+  <div>
+    <div class="card">
+      <div class="card-header">Scenario</div>
+      <div class="card-body">
+        <form id="scenario-form" autocomplete="off">
+          <div class="form-section form-section--single">
+            <p class="form-section-title">Lender</p>
+            <div class="field">
+              <label for="lender">Lender</label>
+              <select id="lender" name="lender">
+                <option value="ad_mortgage">AD Mortgage</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <p class="form-section-title">Loan</p>
+            <div class="field">
+              <label for="loan_amount">Loan amount</label>
+              <input id="loan_amount" type="number" name="loan_amount" value="400000" required>
+            </div>
+            <div class="field">
+              <label for="property_value">Property value</label>
+              <input id="property_value" type="number" name="property_value" value="500000" required>
+            </div>
+            <div class="field">
+              <label for="ltv">LTV %</label>
+              <input id="ltv" type="number" step="0.01" name="ltv" value="80" required>
+            </div>
+            <div class="field">
+              <label for="credit_score">Credit score</label>
+              <input id="credit_score" type="number" name="credit_score" value="740" required>
+            </div>
+            <div class="field">
+              <label for="target_rate">Target rate %</label>
+              <input id="target_rate" type="number" step="0.001" name="target_rate" value="6.875" required>
+              <div class="hint">AD Mortgage uses 1/8 + .49/.99 steps. Try <span class="kbd">6.875</span> or <span class="kbd">6.625</span>.</div>
+            </div>
+            <div class="field">
+              <label for="loan_program">Program</label>
+              <input id="loan_program" type="text" name="loan_program" value="30yr Fixed Conv">
+            </div>
+          </div>
+
+          <div class="form-section">
+            <p class="form-section-title">Property &amp; purpose</p>
+            <div class="field">
+              <label for="occupancy">Occupancy</label>
+              <select id="occupancy" name="occupancy">
+                <option value="primary_residence">Primary</option>
+                <option value="second_home">Second home</option>
+                <option value="investment">Investment</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="property_type">Property type</label>
+              <select id="property_type" name="property_type">
+                <option value="single_family">SFR</option>
+                <option value="condo">Condo</option>
+                <option value="pud">PUD</option>
+                <option value="2_to_4_unit">2-4 unit</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="purpose">Purpose</label>
+              <select id="purpose" name="purpose">
+                <option value="purchase">Purchase</option>
+                <option value="refinance">Refi</option>
+                <option value="cashout">Cash-out</option>
+              </select>
+            </div>
+            <input type="hidden" name="loan_type" value="conventional">
+          </div>
+
+          <button id="compare-btn" class="primary" type="button" onclick="startCompare()">
+            Compare
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card" id="progress-card" style="margin-top:16px;display:none">
+      <div class="card-header">Progress</div>
+      <div class="card-body">
+        <ul class="progress-list" id="progress-list"></ul>
+      </div>
+    </div>
   </div>
-  <div id="report"></div>
+
+  <!-- RIGHT: result panel -->
+  <div class="card" id="result-card">
+    <div class="card-header" id="result-header">Result</div>
+    <div id="result-body">
+      <div class="empty-state">
+        <div class="big">📊</div>
+        <div>Run a comparison to see MOSO ↔ portal diff.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MFA modal -->
+<div class="modal-backdrop" id="mfa-modal" style="display:none">
+  <div class="modal">
+    <h3>MFA required</h3>
+    <p>Enter the code from <strong id="mfa-lender"></strong>:</p>
+    <input id="mfa-code" type="text" autocomplete="one-time-code" inputmode="numeric" placeholder="123456">
+    <div class="actions">
+      <button class="primary" onclick="submitMfa()">Submit</button>
+    </div>
+  </div>
+</div>
+
+</div>
 
 <script>
+const STEPS = [
+  ['moso_pricing',   'MOSO pricing'],
+  ['portal_login',   'Portal login'],
+  ['portal_quote',   'Portal quote'],
+  ['portal_parse',   'Parse result'],
+];
+const ICONS = { pending: '○', started: '◐', ok: '✓', failed: '✕' };
 let currentSession = null;
 
+function renderProgress(state) {
+  const list = document.getElementById('progress-list');
+  list.innerHTML = '';
+  for (const [key, label] of STEPS) {
+    const status = state[key] || 'pending';
+    const li = document.createElement('li');
+    li.className = 'progress-item ' + status;
+    li.innerHTML =
+      '<span class="icon">' + ICONS[status] + '</span>' +
+      '<span class="step-label">' + label + '</span>' +
+      '<span class="step-status">' + status + '</span>';
+    list.appendChild(li);
+  }
+}
+
+function fmtDec(v, digits) {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (Number.isNaN(n)) return String(v);
+  const d = digits ?? 3;
+  return n.toFixed(d);
+}
+
+function setResult(html) {
+  document.getElementById('result-body').innerHTML = html;
+}
+
+function renderErrorBanner(message) {
+  document.getElementById('result-header').textContent = 'Result · error';
+  setResult('<div class="error-banner">' + escapeHtml(message) + '</div>');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function renderReport(report) {
+  document.getElementById('result-header').textContent =
+    'Result · ' + report.lender + ' @ ' + report.scenario.target_rate + '%';
+  const verdictCls = report.matches ? 'match' : 'mismatch';
+  const verdictText = report.matches ? '✓ MATCH' : '✕ MISMATCH';
+  const delta = (report.portal.final_price !== null && report.moso.final_price !== null)
+    ? Number(report.portal.final_price) - Number(report.moso.final_price) : null;
+
+  // Build rows. v1 portal has no itemized adjustments; MOSO may or may not.
+  const mismatchFields = new Set(report.mismatches.map(m => m.field));
+
+  let rows = '';
+
+  // Section: aligned single-rate pricing
+  rows += `
+    <div class="compare-section-label">Rate-sheet price (note rate ${report.scenario.target_rate}%)</div>
+    <div class="compare-grid">
+      <div class="row info">
+        <div class="cell head">Field</div>
+        <div class="cell head">MOSO</div>
+        <div class="cell head">${escapeHtml(report.lender)} portal</div>
+        <div class="cell head">Status</div>
+      </div>
+      <div class="row info">
+        <div class="cell field-name">base_price</div>
+        <div class="cell num">${fmtDec(report.moso.base_price)}%</div>
+        <div class="cell num">—</div>
+        <div class="cell status">info</div>
+      </div>
+      <div class="row ${mismatchFields.has('final_price') ? 'mismatch' : 'match'}">
+        <div class="cell field-name">final_price</div>
+        <div class="cell num">${fmtDec(report.moso.final_price)}%</div>
+        <div class="cell num">${fmtDec(report.portal.final_price)}%</div>
+        <div class="cell status">${
+          mismatchFields.has('final_price')
+            ? ('Δ ' + (delta >= 0 ? '+' : '') + fmtDec(delta))
+            : 'match'
+        }</div>
+      </div>
+    </div>
+  `;
+
+  // Section: MOSO adjustment context (broker comp + costs included)
+  rows += `
+    <div class="compare-section-label">MOSO commission detail</div>
+    <div class="compare-grid">
+      <div class="row info">
+        <div class="cell head">Field</div>
+        <div class="cell head">MOSO</div>
+        <div class="cell head">Portal</div>
+        <div class="cell head">Note</div>
+      </div>
+      <div class="row info">
+        <div class="cell field-name">adjustment_total</div>
+        <div class="cell num">${fmtDec(report.moso.adjustment_total)}</div>
+        <div class="cell num">—</div>
+        <div class="cell status">incl. broker comp + costs</div>
+      </div>
+    </div>
+  `;
+
+  // Section: itemized adjustments
+  const mosoAdjLabels = (report.moso.adjustments || []).map(a => norm(a.label));
+  const portalAdjLabels = (report.portal.adjustments || []).map(a => norm(a.label));
+  const allLabels = Array.from(new Set([...mosoAdjLabels, ...portalAdjLabels])).sort();
+
+  if (allLabels.length === 0) {
+    rows += `
+      <div class="note">
+        Itemized LLPAs: not exposed by AD Mortgage's MOSO model (only roll-ups) nor by the
+        portal's default view. v1.5 will expand portal LLPA dropdown after rate-cell click.
+      </div>
+    `;
+  } else {
+    let adjRows = `
+      <div class="compare-section-label">Itemized adjustments</div>
+      <div class="compare-grid">
+        <div class="row info">
+          <div class="cell head">Label</div>
+          <div class="cell head">MOSO</div>
+          <div class="cell head">Portal</div>
+          <div class="cell head">Status</div>
+        </div>
+    `;
+    const mosoMap = mapByLabel(report.moso.adjustments || []);
+    const portalMap = mapByLabel(report.portal.adjustments || []);
+    for (const label of allLabels) {
+      const m = mosoMap[label];
+      const p = portalMap[label];
+      const field = 'adjustment:' + label;
+      const isMm = mismatchFields.has(field);
+      const cls = isMm ? 'mismatch' : 'match';
+      adjRows += `
+        <div class="row ${cls}">
+          <div class="cell field-name">${escapeHtml(label)}</div>
+          <div class="cell num">${m === undefined ? '—' : fmtDec(m)}</div>
+          <div class="cell num">${p === undefined ? '—' : fmtDec(p)}</div>
+          <div class="cell status">${
+            isMm
+              ? (m === undefined ? 'portal-only' : p === undefined ? 'moso-only' : 'Δ ' + fmtDec(p - m))
+              : 'match'
+          }</div>
+        </div>
+      `;
+    }
+    adjRows += '</div>';
+    rows += adjRows;
+  }
+
+  // Build verdict banner
+  const banner = `
+    <div class="verdict ${verdictCls}">
+      <div class="verdict-headline">${verdictText}</div>
+      <div class="verdict-meta">
+        <div>report ${escapeHtml(report.id)}</div>
+        <div>delta ${delta !== null ? (delta >= 0 ? '+' : '') + fmtDec(delta) : '—'}</div>
+      </div>
+    </div>
+  `;
+
+  setResult(banner + rows);
+}
+
+function norm(s) { return String(s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
+function mapByLabel(adjs) {
+  const out = {};
+  for (const a of adjs) out[norm(a.label)] = Number(a.amount);
+  return out;
+}
+
 async function startCompare() {
-  const form = document.getElementById("scenario-form");
+  const form = document.getElementById('scenario-form');
   const data = Object.fromEntries(new FormData(form));
   const payload = {
     lender: data.lender,
@@ -76,65 +329,92 @@ async function startCompare() {
       target_rate: Number(data.target_rate),
     },
   };
-  document.getElementById("progress").innerHTML = "Starting…";
-  const r = await fetch("/compare", {
-    method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(payload),
-  });
+
+  document.getElementById('compare-btn').disabled = true;
+  document.getElementById('progress-card').style.display = '';
+  const state = {};
+  for (const [k] of STEPS) state[k] = 'pending';
+  renderProgress(state);
+  document.getElementById('result-header').textContent = 'Result · running…';
+  setResult('<div class="empty-state"><div class="big">⏳</div><div>Driving MOSO + ' + escapeHtml(payload.lender) + ' in parallel…</div></div>');
+
+  let r;
+  try {
+    r = await fetch('/compare', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    renderErrorBanner('POST /compare failed: ' + e);
+    document.getElementById('compare-btn').disabled = false;
+    return;
+  }
   if (!r.ok) {
-    document.getElementById("progress").innerText = "Request failed: " + r.status;
+    renderErrorBanner('POST /compare returned ' + r.status);
+    document.getElementById('compare-btn').disabled = false;
     return;
   }
   currentSession = (await r.json()).session_id;
-  const es = new EventSource("/events/stream?session_id=" + currentSession);
-  es.addEventListener("progress", ev => {
+
+  const es = new EventSource('/events/stream?session_id=' + currentSession);
+
+  es.addEventListener('progress', ev => {
     const d = JSON.parse(ev.data);
-    document.getElementById("progress").innerHTML += "<br>" + d.step + ": " + d.status;
+    state[d.step] = d.status;
+    renderProgress(state);
   });
-  es.addEventListener("mfa_required", ev => {
+
+  es.addEventListener('mfa_required', ev => {
     const d = JSON.parse(ev.data);
-    document.getElementById("mfa-lender").innerText = d.lender;
-    document.getElementById("mfa-modal").hidden = false;
+    document.getElementById('mfa-lender').textContent = d.lender;
+    document.getElementById('mfa-modal').style.display = '';
+    document.getElementById('mfa-code').focus();
   });
-  es.addEventListener("error", ev => {
-    document.getElementById("progress").innerHTML += "<br><span class=mismatch>error: " + ev.data + "</span>";
+
+  es.addEventListener('error', ev => {
+    try {
+      const d = JSON.parse(ev.data);
+      renderErrorBanner(d.step + ' · ' + d.message);
+      if (state[d.step]) state[d.step] = 'failed';
+      renderProgress(state);
+    } catch (_) {
+      renderErrorBanner(ev.data);
+    }
+    document.getElementById('compare-btn').disabled = false;
     es.close();
   });
-  es.addEventListener("done", async ev => {
+
+  es.addEventListener('done', async ev => {
     const d = JSON.parse(ev.data);
-    const r = await fetch("/report/" + d.report_id);
-    const report = await r.json();
-    renderReport(report);
+    try {
+      const rr = await fetch('/report/' + d.report_id);
+      if (!rr.ok) throw new Error('GET /report ' + rr.status);
+      const report = await rr.json();
+      renderReport(report);
+    } catch (e) {
+      renderErrorBanner('Could not fetch report: ' + e);
+    }
+    document.getElementById('compare-btn').disabled = false;
     es.close();
   });
+
+  es.onerror = () => {
+    // EventSource auto-reconnects; only flag if no progress is happening.
+    // No-op for now.
+  };
 }
 
 async function submitMfa() {
-  const code = document.getElementById("mfa-code").value;
-  await fetch("/mfa/" + currentSession + "/code", {
-    method: "POST", headers: {"Content-Type": "application/json"},
+  const code = document.getElementById('mfa-code').value.trim();
+  if (!code) return;
+  await fetch('/mfa/' + currentSession + '/code', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({code}),
   });
-  document.getElementById("mfa-modal").hidden = true;
-}
-
-function renderReport(report) {
-  const rows = [];
-  rows.push(`<tr><td>final_price</td><td>${report.moso.final_price}</td><td>${report.portal.final_price}</td><td>${report.matches ? "<span class=match>match</span>" : "<span class=mismatch>mismatch</span>"}</td></tr>`);
-  const allLabels = new Set([
-    ...report.moso.adjustments.map(a => a.label.toLowerCase().trim()),
-    ...report.portal.adjustments.map(a => a.label.toLowerCase().trim()),
-  ]);
-  const mosoMap = Object.fromEntries(report.moso.adjustments.map(a => [a.label.toLowerCase().trim(), a.amount]));
-  const portalMap = Object.fromEntries(report.portal.adjustments.map(a => [a.label.toLowerCase().trim(), a.amount]));
-  const mismatchLabels = new Set(report.mismatches.map(m => m.field.replace(/^adjustment:/, "")));
-  for (const label of allLabels) {
-    const cls = mismatchLabels.has(label) ? "mismatch" : "match";
-    rows.push(`<tr><td>${label}</td><td>${mosoMap[label] ?? "—"}</td><td>${portalMap[label] ?? "—"}</td><td class="${cls}">${mismatchLabels.has(label) ? "mismatch" : "match"}</td></tr>`);
-  }
-  document.getElementById("report").innerHTML =
-    `<h2>Result: ${report.matches ? "<span class=match>MATCH</span>" : "<span class=mismatch>MISMATCH</span>"}</h2>
-     <table><thead><tr><th>field</th><th>MOSO</th><th>Portal</th><th>status</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
+  document.getElementById('mfa-modal').style.display = 'none';
+  document.getElementById('mfa-code').value = '';
 }
 </script>
 </body>
