@@ -1,7 +1,7 @@
 """One-shot helper to record a portal's result page for snapshot tests.
 
 Usage:
-    CHECK_RATE_PASSPHRASE=... uv run python scripts/capture_portal_snapshot.py ad_mortgage \
+    CHECK_RATE_PASSPHRASE=... uv run python -m scripts.capture_portal_snapshot ad_mortgage \
         --target-rate 6.875 \
         --out tests/portals/ad_mortgage/fixtures/result.html
 """
