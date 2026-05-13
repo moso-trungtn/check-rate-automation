@@ -10,7 +10,7 @@ from typing import Any, ClassVar
 from uuid import uuid4
 
 from app.mfa.bridge import MfaBridge
-from app.models import PortalResult, Scenario
+from app.models import Adjustment, PortalResult, Scenario
 from app.portals.base import PortalAdapter, register_adapter
 from app.secrets.store import Credentials
 
@@ -148,8 +148,18 @@ class AdMortgageAdapter(PortalAdapter):
             )
         final_price = Decimal(match.group(1))
 
-        # v1: no LLPA scraping. The rate-stack expansion exposes only roll-ups
-        # in this view; itemized LLPAs are deferred to v1.5.
+        # Click the rate cell to open the Adjustments breakdown panel, then
+        # scrape the itemized LLPAs. Failure here is non-fatal: we still
+        # return the final price even if the breakdown can't be parsed.
+        try:
+            await rate_locator.first.click()
+            await page.wait_for_selector(
+                'text=Adjustments:', timeout=8_000,
+            )
+            await page.wait_for_timeout(500)
+            adjustments = await self._scrape_adjustments(page)
+        except Exception:  # noqa: BLE001
+            adjustments = []
 
         snapshot_dir = Path("data/screenshots")
         snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -158,7 +168,71 @@ class AdMortgageAdapter(PortalAdapter):
 
         return PortalResult(
             final_price=final_price,
-            adjustments=[],
+            adjustments=adjustments,
             raw_html_snapshot_path=str(snapshot_path),
             captured_at=datetime.now(UTC),
         )
+
+    async def _scrape_adjustments(self, page: Any) -> list[Adjustment]:
+        """Read the Adjustments DataGrid that appears below the rate ladder
+        after the user (or our automation) clicks a rate row.
+
+        The DOM is roughly:
+            <Stack>
+              <span>Adjustments:</span>
+              <DataGrid>
+                <row><cell>Description</cell><cell>Rate</cell><cell>Price</cell></row>
+                ...
+                <row><cell>Total</cell><cell>0</cell><cell>-0.625</cell></row>
+              </DataGrid>
+            </Stack>
+
+        We walk the DataGrid that is closest to the 'Adjustments:' label,
+        extract each row's first (label) and last (price) cells, and skip
+        the 'Total' summary row.
+        """
+        rows_json = await page.evaluate(
+            """() => {
+                // Find the span/div whose text is exactly 'Adjustments:' (the label)
+                const label = Array.from(document.querySelectorAll('span,div'))
+                  .find(el => (el.textContent || '').trim() === 'Adjustments:'
+                              && el.children.length === 0);
+                if (!label) return null;
+                // Walk up until we find an ancestor that contains a DataGrid
+                let host = label.parentElement;
+                let grid = null;
+                while (host && !grid) {
+                  grid = host.querySelector('.MuiDataGrid-root');
+                  host = host.parentElement;
+                }
+                if (!grid) return null;
+                // Each row contributes 3 gridcells: [Description, Rate, Price]
+                const rows = Array.from(grid.querySelectorAll('[role="row"]'));
+                const out = [];
+                for (const r of rows) {
+                  const cells = Array.from(r.querySelectorAll('[role="gridcell"]'));
+                  if (cells.length < 3) continue;
+                  const label = (cells[0].textContent || '').trim();
+                  const price = (cells[cells.length - 1].textContent || '').trim();
+                  if (!label || !price) continue;
+                  out.push({label, price});
+                }
+                return out;
+            }"""
+        )
+        if not rows_json:
+            return []
+        items: list[Adjustment] = []
+        for r in rows_json:
+            label = r.get("label", "").strip()
+            price_str = r.get("price", "").strip()
+            if not label or not price_str:
+                continue
+            if label.lower() == "total":
+                continue
+            try:
+                amount = Decimal(price_str.replace(",", "").replace("$", ""))
+            except (ArithmeticError, ValueError):
+                continue
+            items.append(Adjustment(label=label, amount=amount))
+        return items
