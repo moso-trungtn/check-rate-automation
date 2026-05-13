@@ -25,6 +25,7 @@ from app.orchestrator import Orchestrator
 from app.portals.base import get_adapter
 from app.routes.compare import router as compare_router
 from app.routes.events import router as events_router
+from app.routes.mfa import router as mfa_router
 from app.secrets.store import CredentialsStore
 
 LENDER_IDS: dict[str, int] = {"ad_mortgage": 61}
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     fastapi_app = FastAPI(lifespan=lifespan)
     fastapi_app.include_router(compare_router)
     fastapi_app.include_router(events_router)
+    fastapi_app.include_router(mfa_router)
     static_dir = Path(__file__).parent.parent / "static"
     template_dir = Path(__file__).parent.parent / "templates"
     if static_dir.exists():
