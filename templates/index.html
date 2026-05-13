@@ -26,9 +26,22 @@
       check-rate
       <span class="badge badge-version ms-1">v1</span>
     </a>
-    <div class="d-flex align-items-center gap-2 text-muted small">
-      <i class="bi bi-cloud-arrow-down"></i>
-      <span>MOSO ↔ lender portal pricing diff</span>
+    <div class="d-flex align-items-center gap-3">
+      <span class="d-none d-md-inline text-muted small">
+        <i class="bi bi-cloud-arrow-down"></i> MOSO ↔ lender portal pricing diff
+      </span>
+      <button
+        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+        type="button"
+        id="moso-session-btn"
+        data-bs-toggle="modal"
+        data-bs-target="#mosoSessionModal"
+        title="Paste a fresh GetRatesOp cURL to refresh the MOSO session"
+        aria-label="Refresh MOSO session">
+        <i class="bi bi-shield-lock"></i>
+        <span class="d-none d-sm-inline">MOSO session</span>
+        <span class="cr-session-dot" id="session-dot" aria-hidden="true"></span>
+      </button>
     </div>
   </div>
 </nav>
@@ -165,6 +178,60 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ===== MOSO Session Modal ===== -->
+<div class="modal fade" id="mosoSessionModal" tabindex="-1" aria-labelledby="mosoSessionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mosoSessionLabel">
+          <i class="bi bi-shield-lock me-1"></i>Refresh MOSO session
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">
+          The MOSO staging session expires every few hours. Paste a fresh
+          <code>GetRatesOp</code> cURL from your browser's DevTools and we'll
+          extract the auth headers automatically — no JSON editing needed.
+        </p>
+        <details class="mb-3 cr-help">
+          <summary>How to copy the cURL from DevTools</summary>
+          <ol class="mt-2 mb-0 ps-4 small text-muted">
+            <li>Open <a href="https://www.viet18.com/pricing/qm" target="_blank" rel="noopener">viet18.com/pricing/qm</a> in your browser (make sure you're logged in).</li>
+            <li>Open DevTools (<code>⌘ ⌥ I</code> on Mac · <code>F12</code> on Windows).</li>
+            <li>Click the <strong>Network</strong> tab and check <em>Preserve log</em>.</li>
+            <li>Run any quote on the page.</li>
+            <li>Find the request to <code>/exec/GetRatesOp</code> (filter by "GetRates").</li>
+            <li>Right-click → <strong>Copy</strong> → <strong>Copy as cURL</strong>.</li>
+            <li>Paste below and click <strong>Save session</strong>.</li>
+          </ol>
+        </details>
+        <label for="moso-curl-input" class="form-label">Paste cURL</label>
+        <textarea
+          id="moso-curl-input"
+          class="form-control font-mono"
+          rows="8"
+          placeholder="curl 'https://www.viet18.com/exec/GetRatesOp' \&#10;  -H 'xsrf: ...' -H 'user: ...' ..."
+          spellcheck="false"
+          autocomplete="off"></textarea>
+        <div class="form-text">
+          We only extract: <code>XSRF</code>, <code>user</code>, <code>X-SDK-Namespace</code>,
+          <code>x-property</code>, <code>Cookie</code>, <code>Referer</code>, <code>Origin</code>,
+          <code>Authorization</code>. Everything else is dropped.
+        </div>
+        <div id="moso-session-feedback" class="mt-3" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="moso-session-save-btn" onclick="saveMosoSession()">
+          <i class="bi bi-check-lg me-1"></i>
+          <span class="btn-label">Save session</span>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -571,6 +638,89 @@ document.addEventListener('keypress', e => {
     submitMfa();
   }
 });
+
+// ============== MOSO session refresh ==============
+async function refreshSessionStatus() {
+  try {
+    const r = await fetch('/moso/session/status');
+    if (!r.ok) return;
+    const status = await r.json();
+    const dot = document.getElementById('session-dot');
+    if (!dot) return;
+    const hasSession = status.present && Array.isArray(status.keys) && status.keys.length > 0;
+    dot.classList.toggle('ok', hasSession);
+    dot.classList.toggle('missing', !hasSession);
+    const btn = document.getElementById('moso-session-btn');
+    if (btn) btn.title = hasSession
+      ? 'MOSO headers loaded (' + status.keys.length + ' keys). Click to refresh.'
+      : 'No MOSO headers configured. Click to paste a cURL.';
+  } catch (_) { /* non-fatal */ }
+}
+
+function setSessionFeedback(kind, html) {
+  const box = document.getElementById('moso-session-feedback');
+  box.hidden = false;
+  const cls = {
+    success: 'alert alert-success py-2 px-3 mb-0',
+    danger: 'alert alert-danger py-2 px-3 mb-0',
+    warning: 'alert alert-warning py-2 px-3 mb-0',
+  }[kind] || 'alert alert-secondary py-2 px-3 mb-0';
+  box.innerHTML = '<div class="' + cls + '">' + html + '</div>';
+}
+
+async function saveMosoSession() {
+  const ta = document.getElementById('moso-curl-input');
+  const btn = document.getElementById('moso-session-save-btn');
+  const curl = ta.value.trim();
+  if (!curl) {
+    setSessionFeedback('danger', 'Paste the cURL first.');
+    return;
+  }
+  btn.disabled = true;
+  btn.querySelector('.btn-label').textContent = 'Saving…';
+  let r;
+  try {
+    r = await fetch('/moso/session/from-curl', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({curl}),
+    });
+  } catch (e) {
+    setSessionFeedback('danger', 'Request failed: ' + escapeHtml(String(e)));
+    btn.disabled = false; btn.querySelector('.btn-label').textContent = 'Save session';
+    return;
+  }
+  let body;
+  try { body = await r.json(); } catch { body = {}; }
+  if (!r.ok) {
+    setSessionFeedback('danger',
+      '<strong>Could not parse cURL.</strong> ' +
+      escapeHtml(body.detail || ('HTTP ' + r.status))
+    );
+    btn.disabled = false; btn.querySelector('.btn-label').textContent = 'Save session';
+    return;
+  }
+  const keys = body.saved_keys || [];
+  let msg = '<strong>Session saved.</strong> Extracted ' + keys.length + ' headers: <code>' +
+    keys.map(escapeHtml).join('</code> <code>') + '</code>.';
+  if (body.warning) {
+    msg += '<div class="small mt-2"><i class="bi bi-info-circle me-1"></i>' + escapeHtml(body.warning) + '</div>';
+  }
+  setSessionFeedback(body.warning ? 'warning' : 'success', msg);
+  ta.value = '';
+  btn.disabled = false; btn.querySelector('.btn-label').textContent = 'Save session';
+  refreshSessionStatus();
+  // Auto-close on plain success after 1.5s
+  if (!body.warning) {
+    setTimeout(() => {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('mosoSessionModal'));
+      if (modal) modal.hide();
+    }, 1500);
+  }
+}
+
+// On load: probe session status to color the indicator dot.
+document.addEventListener('DOMContentLoaded', refreshSessionStatus);
 </script>
 </body>
 </html>

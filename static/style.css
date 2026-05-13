@@ -391,6 +391,39 @@ button.btn-primary:disabled { background: #94A3B8; border-color: #94A3B8; opacit
   border: 1px solid var(--cr-border);
 }
 
+/* MOSO session dot indicator */
+.cr-session-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #94A3B8;
+  margin-left: 0.15rem;
+}
+.cr-session-dot.ok { background: var(--bs-success); }
+.cr-session-dot.missing { background: var(--bs-danger); animation: dotPulse 1.6s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-session-dot.missing { animation: none; }
+}
+
+/* Help disclosure in modals */
+.cr-help summary {
+  cursor: pointer;
+  color: var(--bs-primary);
+  font-size: 0.85rem;
+}
+.cr-help summary:hover { text-decoration: underline; }
+.cr-help[open] summary { font-weight: 600; }
+.cr-help code {
+  background: var(--cr-surface-muted);
+  padding: 0 0.25rem;
+  border-radius: 3px;
+  font-size: 0.78rem;
+}
+
 /* Modal */
 .modal-content { border: 0; border-radius: 12px; }
 .modal-header { border-bottom: 1px solid var(--cr-border); padding: 1rem 1.25rem; }
