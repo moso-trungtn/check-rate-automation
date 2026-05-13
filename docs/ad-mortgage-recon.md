@@ -51,7 +51,20 @@ There is no explicit "Submit" — the result grid populates as fields are filled
 
 ### v1 parsing strategy
 
-For v1 we extract **final_price only** (percent value from the `-X.XXX%` prefix). LLPA itemized comparison is deferred to v1.5 once we record the `show-rate-stack` expansion shape.
+For v1 we extract **final_price only** (percent value from the `-X.XXX%` prefix). LLPA itemized comparison is deferred to v1.5.
+
+### v1.5 LLPA itemization path (verified live)
+
+To expose itemized LLPAs:
+
+1. After form fill + show-rate-stack click, the rate ladder is visible but no LLPA panel yet.
+2. **Click the rate gridcell** (e.g. `getByRole('gridcell', {name: '6.875', exact: true})`).
+3. An LLPA dropdown opens beneath/beside the row. Cells appear as triples in gridcell document order: `[label, ?, amount]`. Observed examples:
+   - `FICO 740 - 759 and Purchase`, ``, `-0.125`
+   - `Conventional Purchase promo`, ``, `0.250`
+4. Walk the gridcells after the rate row (or use a more specific container selector) and pair label+amount.
+
+Note: MOSO's `commission_detail` for AD Mortgage only contains rollup rows (Base Price, Total Adj, Adjusted Price, etc.) — no itemized LLPAs. So even with portal-side itemization, MOSO-side comparison only has the aggregate `Total Adj`. v1.5 should compare total adj on MOSO vs the SUM of itemized portal LLPAs.
 
 Regex to extract: `^\s*([-+]?\d+\.\d+)%\s*/\s*[-+]?\$.*$`
 
