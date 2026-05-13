@@ -1,0 +1,33 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.enc
+*.key
+*.pem
+
+# Local data — sessions, reports, screenshots, logs, encrypted creds
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+.uv/
+.python-version
+
+# Test artifacts
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+playwright-report/
+test-results/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+.DS_Store
