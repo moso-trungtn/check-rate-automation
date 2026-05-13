@@ -7,22 +7,18 @@ from typing import Any
 
 from app.models import Adjustment
 
+# Only names that are 1:1 aliases of fields already exposed on RateRow
+# (base_price, total_adjustment, final_price). Everything else in
+# commission_detail — Broker Compensation, Costs, State Cost, Total Closing
+# Costs, itemized LLPAs, etc. — is surfaced as an `Adjustment` so the UI
+# can render the breakdown rather than a single rolled-up number.
 _ROLLUP_NAMES = frozenset(
     {
         "base price",
         "total adj",
         "adjusted price",
-        "lender points",
-        "lender credits",
-        "total closing costs",
-        "borrower's final credits",
-        "total cost",
-        "investment cost",
-        "state cost",
-        "broker compensation",
-        "costs",
-        "estimated closing costs",
-        "total",
+        "lender points",    # same value as "Adjusted Price"
+        "lender credits",   # same value as "Adjusted Price"
     }
 )
 

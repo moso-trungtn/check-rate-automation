@@ -305,28 +305,29 @@ function renderReport(report) {
         <div class="sub">${escapeHtml(report.scenario.loan_program)}</div>
       </div>
       <div class="cr-metric">
-        <div class="label">MOSO base price</div>
-        <div class="value">${fmt(mosoBase, 3)}%</div>
-        <div class="sub">from MOSO rate sheet</div>
+        <div class="label">MOSO Lender Credits</div>
+        <div class="value ${portalCls}">${fmt(mosoFinal, 3)}%</div>
+        <div class="sub">Adjusted Price after MOSO adjustments</div>
       </div>
       <div class="cr-metric">
-        <div class="label">${escapeHtml(report.lender)} portal</div>
+        <div class="label">${escapeHtml(report.lender)} Final Price</div>
         <div class="value ${portalCls}">${portalFinal === null ? '—' : fmt(portalFinal, 3) + '%'}</div>
         <div class="sub">live from Quick Pricer Pro</div>
       </div>
       <div class="cr-metric">
         <div class="label">Delta</div>
         <div class="value ${deltaCls}">${delta === null ? '—' : signedFmt(delta, 3) + '%'}</div>
-        <div class="sub">portal − MOSO</div>
+        <div class="sub">portal − MOSO Lender Credits</div>
       </div>
     </div>
   `;
 
-  // ----- Rate-sheet price table -----
+  // ----- Rate-sheet price table: MOSO breakdown + the actual comparison row -----
+  const adjTotal = Number(report.moso.adjustment_total);
   let priceTable = `
-    <div class="cr-section-label">Rate-sheet price <span class="hint">— what the lender prices the note rate at</span></div>
+    <div class="cr-section-label">Pricing breakdown <span class="hint">— how MOSO derives Lender Credits from the base rate sheet</span></div>
     <div class="table-responsive">
-      <table class="table cr-compare mb-0" aria-label="Rate-sheet price comparison">
+      <table class="table cr-compare mb-0" aria-label="Pricing breakdown">
         <thead>
           <tr>
             <th style="width: 35%;">Field</th>
@@ -337,13 +338,19 @@ function renderReport(report) {
         </thead>
         <tbody>
           <tr class="info">
-            <td><span class="field">base_price</span><span class="field-hint">Pre-adjustment price for the note rate</span></td>
+            <td><span class="field">Base Price</span><span class="field-hint">Pre-adjustment lender rate-sheet price</span></td>
             <td class="num">${fmt(mosoBase)}%</td>
             <td class="num empty">—</td>
             <td class="text-end"><span class="cr-badge info">info</span></td>
           </tr>
+          <tr class="info">
+            <td><span class="field">+ Total Adjustments</span><span class="field-hint">Sum of LLPAs + broker comp + costs (broken out below)</span></td>
+            <td class="num">${signedFmt(adjTotal)}</td>
+            <td class="num empty">—</td>
+            <td class="text-end"><span class="cr-badge info">moso-only</span></td>
+          </tr>
           <tr class="${mismatchFields.has('final_price') ? 'mismatch' : 'match'}">
-            <td><span class="field">final_price</span><span class="field-hint">Rate-sheet price (= base for AD Mortgage v1)</span></td>
+            <td><span class="field">= Lender Credits / Lender Points</span><span class="field-hint">Adjusted Price — broker's net (what's compared)</span></td>
             <td class="num">${fmt(mosoFinal)}%</td>
             <td class="num">${portalFinal === null ? '—' : fmt(portalFinal) + '%'}</td>
             <td class="text-end">${
@@ -351,31 +358,6 @@ function renderReport(report) {
                 ? `<span class="cr-badge mismatch">Δ ${signedFmt(delta)}</span>`
                 : '<span class="cr-badge match">match</span>'
             }</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `;
-
-  // ----- MOSO commission detail -----
-  const mosoDetail = `
-    <div class="cr-section-label">MOSO commission detail <span class="hint">— includes broker comp + costs, not on portal</span></div>
-    <div class="table-responsive">
-      <table class="table cr-compare mb-0">
-        <thead>
-          <tr>
-            <th style="width: 35%;">Field</th>
-            <th class="text-end">MOSO</th>
-            <th class="text-end">Portal</th>
-            <th class="text-end" style="width: 18%;">Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="info">
-            <td><span class="field">adjustment_total</span><span class="field-hint">MOSO aggregate of LLPAs + broker comp + costs</span></td>
-            <td class="num">${fmt(report.moso.adjustment_total)}</td>
-            <td class="num empty">—</td>
-            <td class="text-end"><span class="cr-badge info">moso-only</span></td>
           </tr>
         </tbody>
       </table>
@@ -436,7 +418,7 @@ function renderReport(report) {
     `;
   }
 
-  setResult(banner + metrics + priceTable + mosoDetail + adjSection);
+  setResult(banner + metrics + priceTable + adjSection);
 }
 
 // ============== Render error ==============

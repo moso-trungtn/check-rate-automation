@@ -26,19 +26,25 @@ class MosoFacade:
         rows = await self.client.get_rates(scenario, lender_id)
         for r in rows:
             if r.alias == expected_alias and r.interest_rate == scenario.target_rate:
-                # The portal's "Final Price" column shows the lender's rate-sheet
-                # price (== MOSO's base_price). MOSO's RateRow.final_price bakes
-                # in broker compensation + costs from commission_detail, which the
-                # lender portal does NOT show. To align apples-to-apples for v1
-                # we use base_price as the comparison value. adjustment_total +
-                # adjustments are kept for v1.5 LLPA work.
+                # Use MOSO's "Adjusted Price" (== Lender Credits == Lender Points)
+                # as the value to compare against the portal's "Final Price"
+                # column. This is the broker's net after MOSO applies all
+                # adjustments + broker comp + costs.
                 return MosoResult(
                     base_price=r.base_price,
                     adjustment_total=r.total_adjustment,
-                    final_price=r.base_price,
+                    final_price=r.final_price,
                     adjustments=list(r.adjustments),
                 )
         aliases = sorted({r.alias for r in rows})
+        if expected_alias in aliases:
+            # Alias matched but the rate didn't. Surface the available rates
+            # so the caller can correct their pick.
+            available = sorted(r.interest_rate for r in rows if r.alias == expected_alias)
+            raise LenderAliasNotFound(
+                f"Rate {scenario.target_rate} not in {expected_alias} ladder. "
+                f"Available rates: {[str(r) for r in available]}"
+            )
         raise LenderAliasNotFound(
             f"No row in GetRatesOp for alias={expected_alias!r} rate={scenario.target_rate}. "
             f"Got aliases: {aliases}"

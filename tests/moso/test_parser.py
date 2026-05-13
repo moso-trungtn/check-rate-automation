@@ -36,14 +36,16 @@ def test_commission_detail_excludes_rollups() -> None:
     rows = parse_response(_load())
     row = rows[0]
     names = {a.label.lower() for a in row.adjustments}
-    # roll-up rows are excluded from the LLPA list
+    # Only the five names that duplicate RateRow's own fields are excluded.
+    # Broker Compensation, Costs, State Cost, Total Closing Costs, and
+    # itemized LLPAs MUST appear in row.adjustments so the UI can break
+    # them out.
     for forbidden in (
         "base price",
         "total adj",
         "adjusted price",
         "lender points",
         "lender credits",
-        "total closing costs",
     ):
         assert forbidden not in names
 
