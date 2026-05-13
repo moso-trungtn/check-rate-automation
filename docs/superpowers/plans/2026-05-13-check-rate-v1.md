@@ -675,7 +675,9 @@ git commit -m "docs: resolve MOSO ComputeAdjustmentOp semantics for AD Mortgage"
 
 ---
 
-### Task 5: Configuration module
+### Task 5: Configuration module (REVISED after Task 4 recon)
+
+The recon (`docs/moso-endpoint-recon.md`) replaced the ratesheet-on-disk assumption with the live `GetRatesOp` endpoint. Settings now reference a JSON headers file instead of a ratesheets directory.
 
 **Files:**
 - Create: `app/config.py`
@@ -685,25 +687,25 @@ git commit -m "docs: resolve MOSO ComputeAdjustmentOp semantics for AD Mortgage"
 
 ```python
 # tests/test_config.py
-import os
 from decimal import Decimal
+from pathlib import Path
 
 from app.config import Settings
 
 
-def test_settings_reads_env(monkeypatch, tmp_path):
-    monkeypatch.setenv("MOSO_BASE_URL", "http://example.com")
-    monkeypatch.setenv("MOSO_RATESHEETS_DIR", str(tmp_path))
+def test_settings_reads_env(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("MOSO_BASE_URL", "https://example.com")
+    monkeypatch.setenv("MOSO_HEADERS_FILE", str(tmp_path / "moso-headers.json"))
     monkeypatch.setenv("COMPARE_TOLERANCE", "0.01")
     s = Settings()
-    assert s.moso_base_url == "http://example.com"
-    assert s.moso_ratesheets_dir == tmp_path
+    assert s.moso_base_url == "https://example.com"
+    assert s.moso_headers_file == tmp_path / "moso-headers.json"
     assert s.compare_tolerance == Decimal("0.01")
 
 
-def test_settings_defaults(monkeypatch, tmp_path):
+def test_settings_defaults(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("MOSO_BASE_URL", "http://x")
-    monkeypatch.setenv("MOSO_RATESHEETS_DIR", str(tmp_path))
+    monkeypatch.setenv("MOSO_HEADERS_FILE", str(tmp_path / "h.json"))
     monkeypatch.delenv("COMPARE_TOLERANCE", raising=False)
     s = Settings()
     assert s.compare_tolerance == Decimal("0.001")
@@ -731,34 +733,45 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     moso_base_url: str
-    moso_ratesheets_dir: Path
+    moso_headers_file: Path
     compare_tolerance: Decimal = Field(default=Decimal("0.001"))
     check_rate_passphrase: str | None = None
     data_dir: Path = Path("data")
 ```
 
-- [ ] **Step 4: Run tests to verify pass**
+- [ ] **Step 4: Update `.env.example`**
+
+Replace the `MOSO_RATESHEETS_DIR` line with:
+
+```bash
+# Path to JSON file containing MOSO session headers (XSRF, user, Cookie, ...).
+# Populate by copying from DevTools when your MOSO session is logged in.
+# See docs/moso-endpoint-recon.md for the required keys.
+MOSO_HEADERS_FILE=data/moso-headers.json
+```
+
+- [ ] **Step 5: Run tests to verify pass**
 
 Run: `uv run pytest tests/test_config.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add app/config.py tests/test_config.py
-git commit -m "feat: env-driven settings"
+git add app/config.py tests/test_config.py .env.example
+git commit -m "feat: env-driven settings (moso headers file)"
 ```
 
 ---
 
-### Task 6: MOSO ratesheet reader
+### Task 6: ~~MOSO ratesheet reader~~ — DELETED
 
-**Files:**
-- Create: `app/moso/__init__.py` (empty)
-- Create: `app/moso/ratesheet.py`
-- Test: `tests/moso/__init__.py` (empty)
-- Test: `tests/moso/test_ratesheet.py`
-- Test: `tests/moso/fixtures/ad_mortgage_sample.json`
+The Task 4 recon proved we do not need to read parsed ratesheets from disk. `GetRatesOp` returns the full rate ladder with base prices and itemized LLPAs in one HTTP call. The ratesheet reader is **removed** from v1; skip this task entirely.
+
+The original specification below is preserved for archival reference only — do NOT implement.
+
+<details>
+<summary>(Archived original Task 6, do not implement)</summary>
 
 NOTE: Adjust this task's fixture shape to match what was discovered in Task 4. The shape below is a placeholder format — replace with the real shape before writing the test.
 
@@ -881,19 +894,386 @@ git add app/moso tests/moso
 git commit -m "feat: moso parsed-ratesheet reader"
 ```
 
+</details>
+
 ---
 
-### Task 7: MOSO HTTP client (ComputeAdjustmentOp)
+### Task 7: MOSO HTTP client (`GetRatesOp`) — REVISED
 
 **Files:**
-- Create: `app/moso/client.py`
+- Create: `app/moso/__init__.py` (empty)
+- Create: `app/moso/headers.py` — loads `MOSO_HEADERS_FILE` JSON
+- Create: `app/moso/payload.py` — translates `Scenario` → `GetRatesOp` request body
+- Create: `app/moso/parser.py` — parses `GetRatesOp` response → typed rate rows
+- Create: `app/moso/client.py` — async HTTP wiring of the three above
+- Test: `tests/moso/__init__.py` (empty)
+- Test: `tests/moso/fixtures/getratesop_sample.json` — saved live response
+- Test: `tests/moso/test_headers.py`
+- Test: `tests/moso/test_payload.py`
+- Test: `tests/moso/test_parser.py`
 - Test: `tests/moso/test_client.py`
 
-- [ ] **Step 1: Write failing tests**
+This task is intentionally larger than the original — we split it into 4 focused modules so each has one clear responsibility.
+
+#### Step 1 — Save a live response fixture
+
+You will need a real `GetRatesOp` response saved as `tests/moso/fixtures/getratesop_sample.json`. Use the one captured during Task 4 recon. Trim to ≤3 rate rows + their commission_detail to keep the fixture small.
+
+Run: `mkdir -p tests/moso/fixtures && $EDITOR tests/moso/fixtures/getratesop_sample.json`
+
+The trimmed fixture must keep the top-level shape (`_exact`, `has_lower_rates`, `_rows`) and each row's `interest_rate`, `base_price`, `alias`, `loan_program`, `program`, and `commission_detail._rows`.
+
+#### Step 2 — `app/moso/headers.py` (failing test → impl → commit, one micro-cycle)
+
+- [ ] Write `tests/moso/test_headers.py`:
 
 ```python
-# tests/moso/test_client.py
+import json
+from pathlib import Path
+import pytest
+from app.moso.headers import load_headers, HeadersMissing
+
+
+def test_load_headers(tmp_path: Path):
+    p = tmp_path / "h.json"
+    p.write_text(json.dumps({"XSRF": "abc", "user": "u@x", "Cookie": "k=v"}))
+    h = load_headers(p)
+    assert h["XSRF"] == "abc"
+    assert h["user"] == "u@x"
+    assert h["Cookie"] == "k=v"
+
+
+def test_load_headers_missing(tmp_path: Path):
+    with pytest.raises(HeadersMissing):
+        load_headers(tmp_path / "nope.json")
+```
+
+- [ ] Run: `uv run pytest tests/moso/test_headers.py -v` — fails with ImportError.
+
+- [ ] Implement `app/moso/headers.py`:
+
+```python
+"""Load MOSO session headers from a JSON file."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+
+class HeadersMissing(FileNotFoundError):
+    pass
+
+
+def load_headers(path: Path) -> dict[str, str]:
+    if not path.exists():
+        raise HeadersMissing(
+            f"MOSO headers file not found at {path}. "
+            "Populate it by copying DevTools request headers — see docs/moso-endpoint-recon.md."
+        )
+    data = json.loads(path.read_text())
+    return {str(k): str(v) for k, v in data.items()}
+```
+
+- [ ] Run tests: PASS.
+
+#### Step 3 — `app/moso/payload.py`
+
+- [ ] Write `tests/moso/test_payload.py`:
+
+```python
 from decimal import Decimal
+from app.models import (
+    LoanType, Occupancy, PropertyType, Purpose, Scenario,
+)
+from app.moso.payload import scenario_to_request
+
+
+def _scenario(**over):
+    base = dict(
+        loan_amount=Decimal("400000"), credit_score=740,
+        property_value=Decimal("500000"), ltv=Decimal("80"),
+        occupancy=Occupancy.PRIMARY, property_type=PropertyType.SFR,
+        purpose=Purpose.PURCHASE, loan_program="30yr Fixed Conv",
+        loan_type=LoanType.CONVENTIONAL, target_rate=Decimal("6.875"),
+    )
+    return Scenario(**(base | over))
+
+
+def test_payload_uses_ordinals():
+    p = scenario_to_request(_scenario(), lender_id=61)
+    assert p["loan_amount"] == 400000
+    assert p["credit_score"] == 740
+    assert p["property_value"] == 500000
+    assert p["loan_type"] == 0          # conventional
+    assert p["alert_lender"] == 61
+    assert p["alert_lenders"] == [61]
+    assert p["loan_program_group"] == 2 # FIXED_30
+    assert p["get_all_rates"] is True
+    assert p["kind"] == "Rate"
+    assert p["channel"] is None
+
+
+def test_payload_purpose_mapping():
+    assert scenario_to_request(_scenario(purpose=Purpose.PURCHASE), 61)["purpose"] == 1
+    assert scenario_to_request(_scenario(purpose=Purpose.REFI), 61)["purpose"] == 0
+    assert scenario_to_request(_scenario(purpose=Purpose.CASHOUT), 61)["purpose"] == 2
+
+
+def test_payload_occupancy_mapping():
+    assert scenario_to_request(_scenario(occupancy=Occupancy.PRIMARY), 61)["occupancy"] == 0
+    assert scenario_to_request(_scenario(occupancy=Occupancy.SECOND), 61)["occupancy"] == 1
+    assert scenario_to_request(_scenario(occupancy=Occupancy.INVESTMENT), 61)["occupancy"] == 2
+
+
+def test_payload_property_type_mapping():
+    assert scenario_to_request(_scenario(property_type=PropertyType.SFR), 61)["property_type"] == 0
+    assert scenario_to_request(_scenario(property_type=PropertyType.CONDO), 61)["property_type"] == 1
+    assert scenario_to_request(_scenario(property_type=PropertyType.PUD), 61)["property_type"] == 2
+    assert scenario_to_request(_scenario(property_type=PropertyType.TWO_TO_FOUR), 61)["property_type"] == 3
+```
+
+NOTE: The ordinal mappings above are best-effort guesses for v1 based on what we saw in the captured request. **Verify each one against the live MOSO UI before trusting test results**; tune the mapping table in `payload.py` if any mismatch is discovered.
+
+- [ ] Run: fails with ImportError.
+
+- [ ] Implement `app/moso/payload.py`:
+
+```python
+"""Translate a Scenario into a GetRatesOp request body."""
+from __future__ import annotations
+
+from typing import Any
+
+from app.models import LoanType, Occupancy, PropertyType, Purpose, Scenario
+
+_PURPOSE_ORDINAL = {Purpose.REFI: 0, Purpose.PURCHASE: 1, Purpose.CASHOUT: 2}
+_OCCUPANCY_ORDINAL = {Occupancy.PRIMARY: 0, Occupancy.SECOND: 1, Occupancy.INVESTMENT: 2}
+_PROPERTY_ORDINAL = {
+    PropertyType.SFR: 0, PropertyType.CONDO: 1,
+    PropertyType.PUD: 2, PropertyType.TWO_TO_FOUR: 3,
+}
+_LOAN_TYPE_ORDINAL = {LoanType.CONVENTIONAL: 0}
+
+# v1 only handles 30yr Fixed Conv. Group ordinal 2 was observed in the live request.
+_LOAN_PROGRAM_GROUP_ORDINAL: dict[str, int] = {"30yr Fixed Conv": 2}
+
+
+def scenario_to_request(s: Scenario, lender_id: int) -> dict[str, Any]:
+    """Build a GetRatesOp body for the given scenario and lender id.
+
+    Many fields (state, zip, county, AMI, etc.) are not part of our v1 Scenario.
+    v1 ships a fixed example county block — multi-state support is deferred.
+    """
+    return {
+        "get_all_rates": True,
+        "loan_amount": int(s.loan_amount),
+        "property_value": int(s.property_value),
+        "credit_score": s.credit_score,
+        "impounds": True,
+        "purpose": _PURPOSE_ORDINAL[s.purpose],
+        "occupancy": _OCCUPANCY_ORDINAL[s.occupancy],
+        "loan_type": _LOAN_TYPE_ORDINAL[s.loan_type],
+        "property_type": _PROPERTY_ORDINAL[s.property_type],
+        "state": "VA",
+        "zip": "20155",
+        "county_name": "Prince William",
+        "has_equity_loan": False,
+        "super_conf_limit": 1249125,
+        "alert_lender": lender_id,
+        "alert_lenders": [lender_id],
+        "attachment_type": 1,
+        "waive_lender_fee": False,
+        "debt_to_income": 40,
+        "total_number_properties": 3,
+        "actual_number_of_units": 1,
+        "borrower_paid_compensation": 1,
+        "compensation_type": 1,
+        "has_self_employed": False,
+        "first_time_home_buyer": False,
+        "income_to_ami": 0,
+        "ami": 162000,
+        "lock_period": 30,
+        "total_loan_amount": int(s.loan_amount),
+        "loan_program_group": _LOAN_PROGRAM_GROUP_ORDINAL[s.loan_program],
+        "channel": None,
+        "kind": "Rate",
+        "is_paid_for_va_sponsorship": False,
+        "transaction_id": None,
+        "manual_closing_cost_adjustment": None,
+        "loan_additional_adjustment": None,
+        "purchase_plus_geographic_eligibility": None,
+        "purchase_plus_checked_address": None,
+        # county object is hardcoded in v1; deferred to a future task
+        "countyLimit": None,
+    }
+```
+
+- [ ] Run: tests pass.
+
+#### Step 4 — `app/moso/parser.py`
+
+- [ ] Write `tests/moso/test_parser.py`:
+
+```python
+import json
+from decimal import Decimal
+from pathlib import Path
+import pytest
+from app.moso.parser import RateRow, parse_response, RowNotFound
+
+FIX = Path(__file__).parent / "fixtures"
+
+
+def _load():
+    return json.loads((FIX / "getratesop_sample.json").read_text())
+
+
+def test_parse_response_returns_rows():
+    rows = parse_response(_load())
+    assert len(rows) > 0
+    assert all(isinstance(r, RateRow) for r in rows)
+    assert all(r.base_price is not None for r in rows)
+
+
+def test_find_row_by_lender_and_rate():
+    rows = parse_response(_load())
+    target = rows[0]
+    found = next(
+        r for r in rows
+        if r.alias == target.alias and r.interest_rate == target.interest_rate
+    )
+    assert found.final_price == target.final_price
+
+
+def test_commission_detail_excludes_rollups():
+    rows = parse_response(_load())
+    row = rows[0]
+    names = {a.label.lower() for a in row.adjustments}
+    # roll-up rows are excluded from the LLPA list
+    for forbidden in ("base price", "total adj", "adjusted price",
+                      "lender points", "lender credits", "total closing costs"):
+        assert forbidden not in names
+
+
+def test_filter_helpers():
+    rows = parse_response(_load())
+    aliases = {r.alias for r in rows}
+    rates = {r.interest_rate for r in rows}
+    assert len(aliases) >= 1
+    assert len(rates) >= 1
+
+
+def test_row_not_found_raises():
+    rows = parse_response(_load())
+    with pytest.raises(RowNotFound):
+        from app.moso.parser import find_row
+        find_row(rows, alias="Nonexistent Lender", rate=Decimal("99.000"))
+```
+
+- [ ] Run: fails with ImportError.
+
+- [ ] Implement `app/moso/parser.py`:
+
+```python
+"""Parse a GetRatesOp response into typed rate rows."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Any
+
+from app.models import Adjustment
+
+
+_ROLLUP_NAMES = frozenset({
+    "base price", "total adj", "adjusted price",
+    "lender points", "lender credits", "total closing costs",
+    "borrower's final credits", "total cost", "investment cost", "state cost",
+    "broker compensation", "costs", "estimated closing costs", "total",
+})
+
+
+class RowNotFound(LookupError):
+    pass
+
+
+@dataclass(frozen=True)
+class RateRow:
+    alias: str
+    loan_program: str
+    program: str | None
+    mode: str | None
+    interest_rate: Decimal
+    base_price: Decimal
+    total_adjustment: Decimal
+    final_price: Decimal
+    adjustments: list[Adjustment]
+
+
+def _parse_commission(detail: dict[str, Any]) -> tuple[Decimal, Decimal, list[Adjustment]]:
+    base_price = Decimal("0")
+    total_adj = Decimal("0")
+    final_price = Decimal("0")
+    items: list[Adjustment] = []
+    for row in detail.get("_rows", []):
+        if row.get("is_group"):
+            continue
+        name = str(row.get("adjustment_name", "")).strip()
+        value = row.get("adjustment_value")
+        if value is None:
+            continue
+        amount = Decimal(str(value))
+        lname = name.lower()
+        if lname == "base price":
+            base_price = amount
+        elif lname == "total adj":
+            total_adj = amount
+        elif lname == "adjusted price":
+            final_price = amount
+        elif lname in _ROLLUP_NAMES:
+            continue
+        else:
+            items.append(Adjustment(label=name, amount=amount))
+    return base_price, total_adj, final_price, items  # type: ignore[return-value]
+
+
+def parse_response(payload: dict[str, Any]) -> list[RateRow]:
+    rows: list[RateRow] = []
+    for raw in payload.get("_rows", []):
+        base, total, final, llpas = _parse_commission(raw.get("commission_detail") or {})
+        rows.append(RateRow(
+            alias=str(raw.get("alias", "")),
+            loan_program=str(raw.get("loan_program", "")),
+            program=raw.get("program"),
+            mode=raw.get("mode"),
+            interest_rate=Decimal(str(raw.get("interest_rate"))),
+            base_price=base,
+            total_adjustment=total,
+            final_price=final,
+            adjustments=llpas,
+        ))
+    return rows
+
+
+def find_row(rows: list[RateRow], alias: str, rate: Decimal) -> RateRow:
+    for r in rows:
+        if r.alias == alias and r.interest_rate == rate:
+            return r
+    raise RowNotFound(f"No row for alias={alias!r} rate={rate}")
+```
+
+NOTE: `_parse_commission` returns a 4-tuple but the type hint says 3 — fix the annotation to `tuple[Decimal, Decimal, Decimal, list[Adjustment]]` (drop the `# type: ignore`).
+
+- [ ] Run: tests pass.
+
+#### Step 5 — `app/moso/client.py`
+
+- [ ] Write `tests/moso/test_client.py`:
+
+```python
+import json
+from decimal import Decimal
+from pathlib import Path
 
 import httpx
 import pytest
@@ -901,7 +1281,9 @@ import pytest
 from app.models import (
     LoanType, Occupancy, PropertyType, Purpose, Scenario,
 )
-from app.moso.client import MosoClient, MosoApiError
+from app.moso.client import MosoClient, MosoApiError, MosoAuthError
+
+FIX = Path(__file__).parent / "fixtures"
 
 
 def _scenario():
@@ -915,160 +1297,186 @@ def _scenario():
 
 
 @pytest.mark.asyncio
-async def test_compute_adjustment_success():
+async def test_get_rates_success():
+    sample = json.loads((FIX / "getratesop_sample.json").read_text())
+
     def handler(request: httpx.Request) -> httpx.Response:
-        body = request.read()
-        assert b"400000" in body
-        return httpx.Response(200, json={"adjustment": 0.25, "error": None})
+        assert request.method == "POST"
+        assert request.url.path == "/exec/GetRatesOp"
+        assert request.headers.get("XSRF") == "abc"
+        return httpx.Response(200, json=sample)
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as http:
-        client = MosoClient(base_url="http://x", http=http)
-        adj = await client.compute_adjustment(_scenario(), lender="ad_mortgage")
-        assert adj == Decimal("0.25")
+        client = MosoClient(
+            base_url="http://x", http=http,
+            headers={"XSRF": "abc", "user": "u"},
+        )
+        rows = await client.get_rates(_scenario(), lender_id=61)
+        assert len(rows) > 0
 
 
 @pytest.mark.asyncio
-async def test_compute_adjustment_api_error():
-    transport = httpx.MockTransport(lambda r: httpx.Response(200, json={"adjustment": 0, "error": "boom"}))
+async def test_get_rates_401_raises_auth_error():
+    transport = httpx.MockTransport(lambda r: httpx.Response(401))
     async with httpx.AsyncClient(transport=transport) as http:
-        client = MosoClient(base_url="http://x", http=http)
-        with pytest.raises(MosoApiError):
-            await client.compute_adjustment(_scenario(), lender="ad_mortgage")
+        client = MosoClient(base_url="http://x", http=http, headers={})
+        with pytest.raises(MosoAuthError):
+            await client.get_rates(_scenario(), lender_id=61)
 
 
 @pytest.mark.asyncio
-async def test_compute_adjustment_http_500():
+async def test_get_rates_500_raises_api_error():
     transport = httpx.MockTransport(lambda r: httpx.Response(500))
     async with httpx.AsyncClient(transport=transport) as http:
-        client = MosoClient(base_url="http://x", http=http)
+        client = MosoClient(base_url="http://x", http=http, headers={})
         with pytest.raises(MosoApiError):
-            await client.compute_adjustment(_scenario(), lender="ad_mortgage")
+            await client.get_rates(_scenario(), lender_id=61)
 ```
 
-- [ ] **Step 2: Run tests to verify fail**
+- [ ] Run: fails with ImportError.
 
-Run: `uv run pytest tests/moso/test_client.py -v`
-Expected: ImportError on `app.moso.client`.
-
-- [ ] **Step 3: Implement client**
+- [ ] Implement `app/moso/client.py`:
 
 ```python
-# app/moso/client.py
-"""HTTP client for moso-pricing's ComputeAdjustmentOp."""
+"""Async HTTP client for MOSO's GetRatesOp."""
 from __future__ import annotations
-
-from decimal import Decimal
 
 import httpx
 
 from app.models import Scenario
+from app.moso.parser import RateRow, parse_response
+from app.moso.payload import scenario_to_request
 
 
 class MosoApiError(RuntimeError):
     pass
 
 
-def _scenario_to_quote_payload(s: Scenario, lender: str) -> dict[str, object]:
-    return {
-        "loan_amount": float(s.loan_amount),
-        "credit_score": s.credit_score,
-        "property_value": float(s.property_value),
-        "ltv": float(s.ltv),
-        "occupancy": s.occupancy.value,
-        "property_type": s.property_type.value,
-        "loan_program": s.loan_program,
-        "loan_type": s.loan_type.value,
-        "purpose": s.purpose.value,
-        "quote_lender": lender.upper(),
-        "loan_alert_rate": {"interest_rate": float(s.target_rate)},
-    }
+class MosoAuthError(MosoApiError):
+    """Raised when MOSO returns 401/403 — session likely expired."""
 
 
 class MosoClient:
-    def __init__(self, base_url: str, http: httpx.AsyncClient) -> None:
+    def __init__(
+        self, base_url: str, http: httpx.AsyncClient,
+        headers: dict[str, str],
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.http = http
+        self.headers = headers
 
-    async def compute_adjustment(self, scenario: Scenario, lender: str) -> Decimal:
-        url = f"{self.base_url}/execute/ComputeAdjustmentOp"
-        payload = _scenario_to_quote_payload(scenario, lender)
+    async def get_rates(self, scenario: Scenario, lender_id: int) -> list[RateRow]:
+        url = f"{self.base_url}/exec/GetRatesOp"
+        body = scenario_to_request(scenario, lender_id)
         try:
-            resp = await self.http.post(url, json=payload, timeout=15.0)
-            resp.raise_for_status()
+            resp = await self.http.post(
+                url, json=body, headers=self.headers, timeout=30.0,
+            )
         except httpx.HTTPError as e:
             raise MosoApiError(f"MOSO HTTP error: {e}") from e
-        data = resp.json()
-        if data.get("error"):
-            raise MosoApiError(f"MOSO returned error: {data['error']}")
-        return Decimal(str(data["adjustment"]))
+        if resp.status_code in (401, 403):
+            raise MosoAuthError(
+                f"MOSO returned {resp.status_code}. Session likely expired — "
+                f"refresh the headers file."
+            )
+        if resp.status_code >= 400:
+            raise MosoApiError(f"MOSO HTTP {resp.status_code}: {resp.text[:200]}")
+        return parse_response(resp.json())
 ```
 
-- [ ] **Step 4: Run tests to verify pass**
+- [ ] Run all moso tests: `uv run pytest tests/moso/ -v` — all pass.
 
-Run: `uv run pytest tests/moso/test_client.py -v`
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
+- [ ] Commit:
 
 ```bash
-git add app/moso/client.py tests/moso/test_client.py
-git commit -m "feat: moso compute_adjustment http client"
+git add app/moso tests/moso
+git commit -m "feat: moso GetRatesOp client (headers, payload, parser)"
 ```
 
 ---
 
-### Task 8: MOSO facade (combines ratesheet + client into a `MosoResult`)
+### Task 8: MOSO facade — REVISED
+
+Now a thin layer that calls `MosoClient.get_rates`, filters for `(alias, rate)`, and produces a `MosoResult`. No ratesheet reader involved.
 
 **Files:**
 - Create: `app/moso/facade.py`
 - Test: `tests/moso/test_facade.py`
-
-The facade encodes the rate-points vs price-points decision from Task 4. The code below assumes **price-points** (most common). **If Task 4 found rate-points, swap the marked branch.**
 
 - [ ] **Step 1: Write failing test**
 
 ```python
 # tests/moso/test_facade.py
 from decimal import Decimal
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 
 from app.models import (
-    LoanType, Occupancy, PropertyType, Purpose, Scenario,
+    LoanType, Occupancy, PropertyType, Purpose, Scenario, Adjustment,
 )
-from app.moso.facade import MosoFacade
+from app.moso.facade import MosoFacade, LenderAliasNotFound
+from app.moso.parser import RateRow
 
 
-def _scenario():
+def _scenario(rate="6.875"):
     return Scenario(
         loan_amount=Decimal("400000"), credit_score=740,
         property_value=Decimal("500000"), ltv=Decimal("80"),
         occupancy=Occupancy.PRIMARY, property_type=PropertyType.SFR,
         purpose=Purpose.PURCHASE, loan_program="30yr Fixed Conv",
-        loan_type=LoanType.CONVENTIONAL, target_rate=Decimal("6.875"),
+        loan_type=LoanType.CONVENTIONAL, target_rate=Decimal(rate),
     )
 
 
-FIX = Path(__file__).parent / "fixtures"
+def _row(alias="AD Mortgage", rate="6.875", base="100.000", total="-0.250", final="99.750"):
+    return RateRow(
+        alias=alias, loan_program="30-Yr Fixed", program="Fannie Mae", mode="DU",
+        interest_rate=Decimal(rate),
+        base_price=Decimal(base),
+        total_adjustment=Decimal(total),
+        final_price=Decimal(final),
+        adjustments=[Adjustment(label="FICO/LTV", amount=Decimal(total))],
+    )
 
 
 @pytest.mark.asyncio
-async def test_facade_quote_combines_base_and_adjustment():
+async def test_facade_picks_matching_row():
     client = AsyncMock()
-    client.compute_adjustment.return_value = Decimal("-0.250")
-    from app.moso.ratesheet import RatesheetReader
-    facade = MosoFacade(client=client, ratesheets=RatesheetReader(FIX))
+    client.get_rates.return_value = [
+        _row(alias="Other", rate="6.875"),
+        _row(alias="AD Mortgage", rate="6.875"),
+        _row(alias="AD Mortgage", rate="7.000"),
+    ]
+    facade = MosoFacade(client=client, lender_id_table={"ad_mortgage": 61},
+                        alias_table={"ad_mortgage": "AD Mortgage"})
 
     result = await facade.quote(_scenario(), lender="ad_mortgage")
 
-    assert result.base_price == Decimal("100.125")
+    assert result.base_price == Decimal("100.000")
     assert result.adjustment_total == Decimal("-0.250")
-    assert result.final_price == Decimal("99.875")
-    assert len(result.adjustments) == 1
-    assert result.adjustments[0].label == "total_adjustment"
+    assert result.final_price == Decimal("99.750")
+    assert result.adjustments[0].label == "FICO/LTV"
+
+
+@pytest.mark.asyncio
+async def test_facade_raises_if_alias_not_found():
+    client = AsyncMock()
+    client.get_rates.return_value = [_row(alias="Other Lender", rate="6.875")]
+    facade = MosoFacade(client=client, lender_id_table={"ad_mortgage": 61},
+                        alias_table={"ad_mortgage": "AD Mortgage"})
+
+    with pytest.raises(LenderAliasNotFound):
+        await facade.quote(_scenario(), lender="ad_mortgage")
+
+
+@pytest.mark.asyncio
+async def test_facade_unknown_lender_key_raises():
+    client = AsyncMock()
+    facade = MosoFacade(client=client, lender_id_table={}, alias_table={})
+    with pytest.raises(KeyError):
+        await facade.quote(_scenario(), lender="ad_mortgage")
 ```
 
 - [ ] **Step 2: Run test to verify fail**
@@ -1080,38 +1488,44 @@ Expected: ImportError.
 
 ```python
 # app/moso/facade.py
-"""Facade that combines ratesheet + ComputeAdjustmentOp into a MosoResult."""
+"""Thin facade that turns a Scenario into a MosoResult via GetRatesOp."""
 from __future__ import annotations
 
-from decimal import Decimal
-
-from app.models import Adjustment, MosoResult, Scenario
+from app.models import MosoResult, Scenario
 from app.moso.client import MosoClient
-from app.moso.ratesheet import RatesheetReader
+
+
+class LenderAliasNotFound(LookupError):
+    """No row with the expected alias + rate was present in the GetRatesOp response."""
 
 
 class MosoFacade:
-    def __init__(self, client: MosoClient, ratesheets: RatesheetReader) -> None:
+    def __init__(
+        self,
+        client: MosoClient,
+        lender_id_table: dict[str, int],
+        alias_table: dict[str, str],
+    ) -> None:
         self.client = client
-        self.ratesheets = ratesheets
+        self.lender_id_table = lender_id_table
+        self.alias_table = alias_table
 
     async def quote(self, scenario: Scenario, lender: str) -> MosoResult:
-        base_price = self.ratesheets.get_base_price(
-            lender, scenario.loan_program, scenario.target_rate,
-        )
-        adjustment = await self.client.compute_adjustment(scenario, lender)
-
-        # ASSUMPTION (Task 4 outcome): adjustment is in PRICE POINTS.
-        # If Task 4 found it is RATE POINTS, replace the next line with:
-        #   final_price = self.ratesheets.get_base_price(
-        #       lender, scenario.loan_program, scenario.target_rate + adjustment)
-        final_price = base_price + adjustment
-
-        return MosoResult(
-            base_price=base_price,
-            adjustment_total=adjustment,
-            final_price=final_price,
-            adjustments=[Adjustment(label="total_adjustment", amount=adjustment)],
+        lender_id = self.lender_id_table[lender]
+        expected_alias = self.alias_table[lender]
+        rows = await self.client.get_rates(scenario, lender_id)
+        for r in rows:
+            if r.alias == expected_alias and r.interest_rate == scenario.target_rate:
+                return MosoResult(
+                    base_price=r.base_price,
+                    adjustment_total=r.total_adjustment,
+                    final_price=r.final_price,
+                    adjustments=list(r.adjustments),
+                )
+        aliases = sorted({r.alias for r in rows})
+        raise LenderAliasNotFound(
+            f"No row in GetRatesOp for alias={expected_alias!r} rate={scenario.target_rate}. "
+            f"Got aliases: {aliases}"
         )
 ```
 
@@ -1124,8 +1538,19 @@ Expected: PASS.
 
 ```bash
 git add app/moso/facade.py tests/moso/test_facade.py
-git commit -m "feat: moso facade combining ratesheet base price + adjustment"
+git commit -m "feat: moso facade producing MosoResult from GetRatesOp"
 ```
+
+### NOTE on lender tables
+
+The `lender_id_table` and `alias_table` are dependency-injected so wiring lives in the FastAPI app (Task 17) where the real values are configured:
+
+```python
+LENDER_IDS = {"ad_mortgage": 61}
+LENDER_ALIASES = {"ad_mortgage": "AD Mortgage"}  # TUNE on first live call
+```
+
+The exact alias for AD Mortgage in the live response will be confirmed during Task 16/17 manual smoke. If it's `ADMortgage` or `AD Mortgage, Inc` etc., update the `LENDER_ALIASES` constant.
 
 ---
 
@@ -2263,7 +2688,7 @@ from app.main import create_app
 
 def test_app_starts_and_returns_index(monkeypatch, tmp_path):
     monkeypatch.setenv("MOSO_BASE_URL", "http://x")
-    monkeypatch.setenv("MOSO_RATESHEETS_DIR", str(tmp_path))
+    monkeypatch.setenv("MOSO_HEADERS_FILE", str(tmp_path / "headers.json"))
     monkeypatch.setenv("CHECK_RATE_PASSPHRASE", "test")
     monkeypatch.setenv("CHECK_RATE_TESTING", "1")
     app = create_app()
@@ -2303,10 +2728,14 @@ from app.events.bus import EventBus
 from app.mfa.bridge import MfaBridge
 from app.moso.client import MosoClient
 from app.moso.facade import MosoFacade
-from app.moso.ratesheet import RatesheetReader
+from app.moso.headers import load_headers
 from app.orchestrator import Orchestrator
 from app.portals.base import get_adapter
 from app.secrets.store import CredentialsStore
+
+
+LENDER_IDS: dict[str, int] = {"ad_mortgage": 61}
+LENDER_ALIASES: dict[str, str] = {"ad_mortgage": "AD Mortgage"}  # tune live
 
 
 def create_app() -> FastAPI:
@@ -2325,9 +2754,13 @@ def create_app() -> FastAPI:
         playwright = await async_playwright().start()
         browser = await playwright.chromium.launch(headless=True)
         try:
+            moso_headers = load_headers(settings.moso_headers_file)
             facade = MosoFacade(
-                client=MosoClient(settings.moso_base_url, http),
-                ratesheets=RatesheetReader(settings.moso_ratesheets_dir),
+                client=MosoClient(
+                    settings.moso_base_url, http, headers=moso_headers,
+                ),
+                lender_id_table=LENDER_IDS,
+                alias_table=LENDER_ALIASES,
             )
             bus = EventBus()
             mfa = MfaBridge()
@@ -2447,7 +2880,7 @@ from app.main import create_app
 
 def test_post_compare_returns_session_id(monkeypatch, tmp_path):
     monkeypatch.setenv("MOSO_BASE_URL", "http://x")
-    monkeypatch.setenv("MOSO_RATESHEETS_DIR", str(tmp_path))
+    monkeypatch.setenv("MOSO_HEADERS_FILE", str(tmp_path / "headers.json"))
     monkeypatch.setenv("CHECK_RATE_PASSPHRASE", "t")
     monkeypatch.setenv("CHECK_RATE_TESTING", "1")
     app = create_app()
@@ -2559,7 +2992,7 @@ from app.main import create_app
 
 def test_sse_streams_events(monkeypatch, tmp_path):
     monkeypatch.setenv("MOSO_BASE_URL", "http://x")
-    monkeypatch.setenv("MOSO_RATESHEETS_DIR", str(tmp_path))
+    monkeypatch.setenv("MOSO_HEADERS_FILE", str(tmp_path / "headers.json"))
     monkeypatch.setenv("CHECK_RATE_PASSPHRASE", "t")
     monkeypatch.setenv("CHECK_RATE_TESTING", "1")
     app = create_app()
@@ -2660,7 +3093,7 @@ from app.main import create_app
 
 def test_post_mfa_code_resolves_pending(monkeypatch, tmp_path):
     monkeypatch.setenv("MOSO_BASE_URL", "http://x")
-    monkeypatch.setenv("MOSO_RATESHEETS_DIR", str(tmp_path))
+    monkeypatch.setenv("MOSO_HEADERS_FILE", str(tmp_path / "headers.json"))
     monkeypatch.setenv("CHECK_RATE_PASSPHRASE", "t")
     monkeypatch.setenv("CHECK_RATE_TESTING", "1")
     app = create_app()

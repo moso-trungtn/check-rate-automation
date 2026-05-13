@@ -1,0 +1,554 @@
+{
+  "_exact": true,
+  "has_lower_rates": false,
+  "_rows": [
+    {
+      "loan_program": "30-Yr Fixed",
+      "total_cost": 34779.4,
+      "borrower_paid_compensation": 1.0,
+      "adjusted_cost": 26035.4,
+      "program": "Fannie Mae",
+      "loan_type": 0,
+      "mode": "DU Investment",
+      "p_and_i": 2308.3329789522013,
+      "base_price": 6.17975,
+      "interest_rate": 5.0,
+      "alias": "Kind Lending",
+      "payment": 2308.33,
+      "lender_fee": 6.17975,
+      "commission_detail": {
+        "_exact": true,
+        "_rows": [
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 6.17975,
+            "adjustment_name": "Base Price",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.125,
+            "adjustment_name": "Total Adj",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 26035.4,
+            "level": 0,
+            "adjustment_value": 6.05475,
+            "adjustment_name": "Adjusted Price",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 26035.4,
+            "level": 0,
+            "adjustment_value": 6.05475,
+            "adjustment_name": "Lender Points",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 4300.0,
+            "level": 0,
+            "adjustment_value": 1.0,
+            "adjustment_name": "Broker Compensation",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": 4300.0,
+            "level": 1,
+            "adjustment_value": 1.0,
+            "adjustment_name": "Broker Compensation",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 4444.0,
+            "level": 0,
+            "adjustment_value": 1.0335,
+            "adjustment_name": "Costs",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": 3200.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "Estimated Closing Costs",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 444.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "Investment Cost",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 800.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "State Cost",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 34779.4,
+            "level": 0,
+            "adjustment_value": 8.08825,
+            "adjustment_name": "Total Closing Costs",
+            "is_group": false
+          }
+        ],
+        "l": 11
+      },
+      "key": null,
+      "group": 2,
+      "quote_lender": 60,
+      "mortgage_insurance": 0.0,
+      "apr": 5.758,
+      "kind": "Rate",
+      "created": 1778624751888,
+      "today_rate_sheet_url": "https://storage.googleapis.com/lenderrate-master-ratesheet/KindLending.xlsx",
+      "compensation_type": 1,
+      "adjustment_detail": {
+        "_exact": true,
+        "_rows": [
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.1,
+            "adjustment_name": "Loan Amt/ LLPA (DU)",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": -0.1,
+            "adjustment_name": "\u2265 400k",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.15,
+            "adjustment_name": "State Adjustments (DU)",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": -0.15,
+            "adjustment_name": "State (VA)",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 0.0,
+            "adjustment_name": "DU Rate/Term LLPAs Adjustment",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": 0.0,
+            "adjustment_name": "FICO (760 - 779) and 30 < LTV <= 60",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 0.125,
+            "adjustment_name": "DU Loan Feature Adjustments",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": 0.125,
+            "adjustment_name": "Investment Property 2 and 30 < LTV <= 60",
+            "is_group": false
+          },
+          {
+            "level": 0,
+            "adjustment_value": -0.125,
+            "adjustment_name": "Total"
+          }
+        ],
+        "l": 9
+      },
+      "full_alias": "Kind Lending",
+      "price_after_broker_comp": 6.05475,
+      "cost_after_broker_comp": 26035.4,
+      "lender_logo": "https://lh3.googleusercontent.com/2NpWhMjSKldQ8bKI1V-pbuRke_odjXxB8BNDE0IVpkF9NVXLEQTKNn2C9gW9-MBm2QZjHb6_bL35e53qAWfsOLBo3LQ2D36cpuSCN17OJJ6V=s200",
+      "adjusted_price": 6.05475,
+      "header": "Fannie Mae 30 Year Fixed Investment",
+      "adjustment": -0.125,
+      "category": 0,
+      "is_paid_for_va_sponsorship": true
+    },
+    {
+      "loan_program": "30-Yr Fixed",
+      "total_cost": 35432.0,
+      "borrower_paid_compensation": 1.0,
+      "adjusted_cost": 26688.0,
+      "program": "Freddie Mac",
+      "loan_type": 0,
+      "mode": "LP Investment",
+      "p_and_i": 2308.3329789522013,
+      "base_price": 6.3315,
+      "interest_rate": 5.0,
+      "alias": "Kind Lending",
+      "payment": 2308.33,
+      "lender_fee": 6.3315,
+      "commission_detail": {
+        "_exact": true,
+        "_rows": [
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 6.3315,
+            "adjustment_name": "Base Price",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.125,
+            "adjustment_name": "Total Adj",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 26688.0,
+            "level": 0,
+            "adjustment_value": 6.2065,
+            "adjustment_name": "Adjusted Price",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 26688.0,
+            "level": 0,
+            "adjustment_value": 6.2065,
+            "adjustment_name": "Lender Points",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 4300.0,
+            "level": 0,
+            "adjustment_value": 1.0,
+            "adjustment_name": "Broker Compensation",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": 4300.0,
+            "level": 1,
+            "adjustment_value": 1.0,
+            "adjustment_name": "Broker Compensation",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 4444.0,
+            "level": 0,
+            "adjustment_value": 1.0335,
+            "adjustment_name": "Costs",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": 3200.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "Estimated Closing Costs",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 444.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "Investment Cost",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 800.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "State Cost",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 35432.0,
+            "level": 0,
+            "adjustment_value": 8.24,
+            "adjustment_name": "Total Closing Costs",
+            "is_group": false
+          }
+        ],
+        "l": 11
+      },
+      "key": null,
+      "quote_lender": 60,
+      "mortgage_insurance": 0.0,
+      "apr": 5.773,
+      "kind": "Rate",
+      "created": 1778624751888,
+      "today_rate_sheet_url": "https://storage.googleapis.com/lenderrate-master-ratesheet/KindLending.xlsx",
+      "compensation_type": 1,
+      "adjustment_detail": {
+        "_exact": true,
+        "_rows": [
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 0.0,
+            "adjustment_name": "LP Rate/Term LLPAs Adjustment",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": 0.0,
+            "adjustment_name": "FICO (760 - 779) and 30 < LTV <= 60",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.1,
+            "adjustment_name": "Loan Amt/LLPA (LP)",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": -0.1,
+            "adjustment_name": "\u2265 400k",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.15,
+            "adjustment_name": "State Adjustments (LP)",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": -0.15,
+            "adjustment_name": "State (VA)",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 0.125,
+            "adjustment_name": "LP Loan Feature Adjustments",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": 0.125,
+            "adjustment_name": "Investment Property 2 and 30 < LTV <= 60",
+            "is_group": false
+          },
+          {
+            "level": 0,
+            "adjustment_value": -0.125,
+            "adjustment_name": "Total"
+          }
+        ],
+        "l": 9
+      },
+      "full_alias": "Kind Lending Freddie Mac",
+      "price_after_broker_comp": 6.2065,
+      "cost_after_broker_comp": 26688.0,
+      "lender_logo": "https://lh3.googleusercontent.com/2NpWhMjSKldQ8bKI1V-pbuRke_odjXxB8BNDE0IVpkF9NVXLEQTKNn2C9gW9-MBm2QZjHb6_bL35e53qAWfsOLBo3LQ2D36cpuSCN17OJJ6V=s200",
+      "adjusted_price": 6.2065,
+      "header": "Freddie Mac 30 Year Fixed Investment",
+      "adjustment": -0.125,
+      "category": 0,
+      "is_paid_for_va_sponsorship": true
+    },
+    {
+      "loan_program": "30-Yr Fixed",
+      "total_cost": 31643.6,
+      "borrower_paid_compensation": 1.0,
+      "adjusted_cost": 22899.6,
+      "program": "Fannie Mae",
+      "loan_type": 0,
+      "mode": "DU Investment",
+      "p_and_i": 2341.2939794960275,
+      "base_price": 5.4505,
+      "interest_rate": 5.125,
+      "alias": "Kind Lending",
+      "payment": 2341.29,
+      "lender_fee": 5.4505,
+      "commission_detail": {
+        "_exact": true,
+        "_rows": [
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 5.4505,
+            "adjustment_name": "Base Price",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.125,
+            "adjustment_name": "Total Adj",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 22899.6,
+            "level": 0,
+            "adjustment_value": 5.3255,
+            "adjustment_name": "Adjusted Price",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 22899.6,
+            "level": 0,
+            "adjustment_value": 5.3255,
+            "adjustment_name": "Lender Points",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 4300.0,
+            "level": 0,
+            "adjustment_value": 1.0,
+            "adjustment_name": "Broker Compensation",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": 4300.0,
+            "level": 1,
+            "adjustment_value": 1.0,
+            "adjustment_name": "Broker Compensation",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 4444.0,
+            "level": 0,
+            "adjustment_value": 1.0335,
+            "adjustment_name": "Costs",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": 3200.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "Estimated Closing Costs",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 444.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "Investment Cost",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 800.0,
+            "level": 1,
+            "adjustment_value": null,
+            "adjustment_name": "State Cost",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": 31643.6,
+            "level": 0,
+            "adjustment_value": 7.359,
+            "adjustment_name": "Total Closing Costs",
+            "is_group": false
+          }
+        ],
+        "l": 11
+      },
+      "key": null,
+      "group": 2,
+      "quote_lender": 60,
+      "mortgage_insurance": 0.0,
+      "apr": 5.815,
+      "kind": "Rate",
+      "created": 1778624751888,
+      "today_rate_sheet_url": "https://storage.googleapis.com/lenderrate-master-ratesheet/KindLending.xlsx",
+      "compensation_type": 1,
+      "adjustment_detail": {
+        "_exact": true,
+        "_rows": [
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.1,
+            "adjustment_name": "Loan Amt/ LLPA (DU)",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": -0.1,
+            "adjustment_name": "\u2265 400k",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": -0.15,
+            "adjustment_name": "State Adjustments (DU)",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": -0.15,
+            "adjustment_name": "State (VA)",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 0.0,
+            "adjustment_name": "DU Rate/Term LLPAs Adjustment",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": 0.0,
+            "adjustment_name": "FICO (760 - 779) and 30 < LTV <= 60",
+            "is_group": false
+          },
+          {
+            "adjustment_cost": null,
+            "level": 0,
+            "adjustment_value": 0.125,
+            "adjustment_name": "DU Loan Feature Adjustments",
+            "is_group": true
+          },
+          {
+            "adjustment_cost": null,
+            "level": 1,
+            "adjustment_value": 0.125,
+            "adjustment_name": "Investment Property 2 and 30 < LTV <= 60",
+            "is_group": false
+          },
+          {
+            "level": 0,
+            "adjustment_value": -0.125,
+            "adjustment_name": "Total"
+          }
+        ],
+        "l": 9
+      },
+      "full_alias": "Kind Lending",
+      "price_after_broker_comp": 5.3255,
+      "cost_after_broker_comp": 22899.6,
+      "lender_logo": "https://lh3.googleusercontent.com/2NpWhMjSKldQ8bKI1V-pbuRke_odjXxB8BNDE0IVpkF9NVXLEQTKNn2C9gW9-MBm2QZjHb6_bL35e53qAWfsOLBo3LQ2D36cpuSCN17OJJ6V=s200",
+      "adjusted_price": 5.3255,
+      "header": "Fannie Mae 30 Year Fixed Investment",
+      "adjustment": -0.125,
+      "category": 0,
+      "is_paid_for_va_sponsorship": true
+    }
+  ]
+}
