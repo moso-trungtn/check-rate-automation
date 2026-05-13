@@ -42,9 +42,11 @@ def test_payload_uses_ordinals() -> None:
 
 
 def test_payload_purpose_mapping() -> None:
-    assert scenario_to_request(_scenario(purpose=Purpose.PURCHASE), 61)["purpose"] == 1
+    # Verified live against /exec/GetRatesOp for AD Mortgage:
+    #   0 → Refinance, 1 → Cash Out, 2 → Purchase.
     assert scenario_to_request(_scenario(purpose=Purpose.REFI), 61)["purpose"] == 0
-    assert scenario_to_request(_scenario(purpose=Purpose.CASHOUT), 61)["purpose"] == 2
+    assert scenario_to_request(_scenario(purpose=Purpose.CASHOUT), 61)["purpose"] == 1
+    assert scenario_to_request(_scenario(purpose=Purpose.PURCHASE), 61)["purpose"] == 2
 
 
 def test_payload_occupancy_mapping() -> None:

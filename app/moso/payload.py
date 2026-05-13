@@ -5,7 +5,11 @@ from typing import Any
 
 from app.models import LoanType, Occupancy, PropertyType, Purpose, Scenario
 
-_PURPOSE_ORDINAL = {Purpose.REFI: 0, Purpose.PURCHASE: 1, Purpose.CASHOUT: 2}
+# Verified empirically against /exec/GetRatesOp for AD Mortgage:
+#   0 → Refinance     (response has "Refinance Rate/Term Fico Ltv Adjustments")
+#   1 → Cash Out      (response has "Cash Out Fico Ltv Adjustments")
+#   2 → Purchase      (response has "Purchase Fico Ltv Adjustments")
+_PURPOSE_ORDINAL = {Purpose.REFI: 0, Purpose.CASHOUT: 1, Purpose.PURCHASE: 2}
 _OCCUPANCY_ORDINAL = {Occupancy.PRIMARY: 0, Occupancy.SECOND: 1, Occupancy.INVESTMENT: 2}
 _PROPERTY_ORDINAL = {
     PropertyType.SFR: 0,

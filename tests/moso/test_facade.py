@@ -34,20 +34,26 @@ def _scenario(rate: str = "6.875") -> Scenario:
 def _row(
     alias: str = "AD Mortgage",
     rate: str = "6.875",
-    base: str = "100.000",
-    total: str = "-0.250",
-    final: str = "99.750",
+    base: str = "-3.070",
+    pricing_total: str = "0.875",
+    lender_credits: str = "-2.195",
 ) -> RateRow:
     return RateRow(
         alias=alias,
         loan_program="30-Yr Fixed",
         program="Fannie Mae",
-        mode="DU",
+        mode=None,
         interest_rate=Decimal(rate),
         base_price=Decimal(base),
-        total_adjustment=Decimal(total),
-        final_price=Decimal(final),
-        adjustments=[Adjustment(label="FICO/LTV", amount=Decimal(total))],
+        commission_total_adj=Decimal(pricing_total),
+        adjusted_price_full=Decimal(lender_credits),
+        pricing_adjustment_total=Decimal(pricing_total),
+        lender_credits=Decimal(lender_credits),
+        pricing_adjustments=[
+            Adjustment(label="FICO (740 - 759) and 75 < LTV <= 80",
+                       amount=Decimal(pricing_total)),
+        ],
+        commission_items=[],
     )
 
 
@@ -67,14 +73,13 @@ async def test_facade_picks_matching_row() -> None:
 
     result = await facade.quote(_scenario(), lender="ad_mortgage")
 
-    assert result.base_price == Decimal("100.000")
-    assert result.adjustment_total == Decimal("-0.250")
-    # v1: facade exposes RateRow.final_price (the "Adjusted Price" /
-    # "Lender Credits" / "Lender Points" value from MOSO's commission_detail)
-    # as MosoResult.final_price, since that's what we compare with the
-    # portal's "Final Price" column.
-    assert result.final_price == Decimal("99.750")
-    assert result.adjustments[0].label == "FICO/LTV"
+    # Facade exposes the LLPA-only ("PRICING ADJUSTMENT") view that MOSO's UI
+    # shows: base + pricing total = lender credits.
+    assert result.base_price == Decimal("-3.070")
+    assert result.adjustment_total == Decimal("0.875")
+    assert result.final_price == Decimal("-2.195")  # base + pricing total
+    assert result.adjustments[0].label == "FICO (740 - 759) and 75 < LTV <= 80"
+    assert result.adjustments[0].amount == Decimal("0.875")
 
 
 @pytest.mark.asyncio

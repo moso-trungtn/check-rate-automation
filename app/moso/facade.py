@@ -26,15 +26,22 @@ class MosoFacade:
         rows = await self.client.get_rates(scenario, lender_id)
         for r in rows:
             if r.alias == expected_alias and r.interest_rate == scenario.target_rate:
-                # Use MOSO's "Adjusted Price" (== Lender Credits == Lender Points)
-                # as the value to compare against the portal's "Final Price"
-                # column. This is the broker's net after MOSO applies all
-                # adjustments + broker comp + costs.
+                # MOSO's UI shows pricing in this hierarchy:
+                #   Base Price + Total Adj (LLPAs only) = Lender Credits
+                #   then Broker Comp + Costs are applied on top.
+                # The portal's "Final Price" column == Lender Credits, so
+                # that's what we compare. We expose:
+                #   adjustment_total    → r.pricing_adjustment_total (LLPA sum,
+                #                          matches MOSO UI "Total Adj")
+                #   final_price         → r.lender_credits (base + LLPA total,
+                #                          matches MOSO UI "Lender Credits")
+                #   adjustments         → r.pricing_adjustments (itemized LLPAs
+                #                          like "FICO X-Y and LTV...")
                 return MosoResult(
                     base_price=r.base_price,
-                    adjustment_total=r.total_adjustment,
-                    final_price=r.final_price,
-                    adjustments=list(r.adjustments),
+                    adjustment_total=r.pricing_adjustment_total,
+                    final_price=r.lender_credits,
+                    adjustments=list(r.pricing_adjustments),
                 )
         aliases = sorted({r.alias for r in rows})
         if not aliases:
