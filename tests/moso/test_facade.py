@@ -69,7 +69,10 @@ async def test_facade_picks_matching_row() -> None:
 
     assert result.base_price == Decimal("100.000")
     assert result.adjustment_total == Decimal("-0.250")
-    assert result.final_price == Decimal("99.750")
+    # v1: facade uses base_price as final_price (matches portal column 4).
+    # The RateRow.final_price (99.750) is shadowed because it includes broker
+    # comp + costs that the portal does not expose.
+    assert result.final_price == Decimal("100.000")
     assert result.adjustments[0].label == "FICO/LTV"
 
 
