@@ -96,9 +96,3 @@ def create_app() -> FastAPI:
 
     log.info("app_created")
     return fastapi_app
-
-
-# Module-level app for `uvicorn app.main:app`. Skip instantiation when imported
-# under tests (the test calls create_app() explicitly after setting env vars).
-if os.environ.get("MOSO_BASE_URL"):
-    app = create_app()

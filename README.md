@@ -12,7 +12,7 @@ Requires Python 3.11+ and `uv` (`brew install uv` on macOS).
 
 ## Run
 
-    uv run uvicorn app.main:app --reload --port 8080
+    uv run uvicorn --factory app.main:create_app --reload --port 8080
     # open http://localhost:8080
 
 ## Tests
