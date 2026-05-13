@@ -83,30 +83,73 @@ class AdMortgageAdapter(PortalAdapter):
         await page.get_by_role("textbox", name="CLTV").fill(str(int(scenario.ltv)))
 
     async def submit(self, page: Any) -> None:
-        # AD Mortgage's Quick Pricer Pro is reactive — no submit button.
-        # Wait for the rate grid to render.
-        await page.wait_for_selector(".MuiDataGrid-row", timeout=20_000)
+        # Quick Pricer Pro is reactive — no submit button.
+        # Wait for the result panel to compute; show-rate-stack appears when ready.
+        await page.wait_for_selector(
+            '[data-testid="show-rate-stack"]', timeout=60_000,
+        )
+        # Expand the rate ladder so gridcells become visible.
+        await page.get_by_test_id("show-rate-stack").first.click()
+        await page.wait_for_selector('[role="gridcell"]', timeout=20_000)
+        # Brief settle to let virtualized rows render.
+        await page.wait_for_timeout(800)
 
     async def parse_result(self, page: Any, target_rate: Decimal) -> PortalResult:
-        rate_text = format(target_rate.normalize(), "f")  # "6.875"
-        cell = page.get_by_role("gridcell", name=rate_text)
-        if await cell.count() == 0:
-            raise PortalParseError(f"Rate {target_rate} not in AD Mortgage result grid")
-        await cell.first.click()
+        # Each rate row contributes 4 gridcells in order: rate, payment, credits, price.
+        # We find the gridcell whose text equals the target rate, then read the
+        # gridcell three slots later for the "X.XXX% / $..." price string.
+        rate_text = format(target_rate.normalize(), "f")
+        cells = page.locator('[role="gridcell"]')
+        count = await cells.count()
+        if count == 0:
+            raise PortalParseError("No gridcells in AD Mortgage result panel")
 
-        # The 4th div of the now-selected row contains the price text.
-        price_locator = page.locator(".MuiDataGrid-row.Mui-selected > div:nth-child(4)")
-        if await price_locator.count() == 0:
-            raise PortalParseError("Selected row has no 4th column")
-        price_text = (await price_locator.first.text_content()) or ""
+        # The rate ladder uses row virtualization — only on-screen rows are in the DOM.
+        # Use Playwright's role/name locator + scroll_into_view to materialize the row.
+        rate_locator = page.get_by_role("gridcell", name=rate_text, exact=True)
+        try:
+            await rate_locator.first.scroll_into_view_if_needed(timeout=5_000)
+        except Exception as e:  # noqa: BLE001
+            # Re-query gridcells to give a useful diagnostic.
+            sampled: list[str] = []
+            current = await cells.count()
+            for i in range(min(current, 30)):
+                sampled.append((await cells.nth(i).text_content() or "").strip())
+            raise PortalParseError(
+                f"Rate {target_rate} (as text {rate_text!r}) not visible "
+                f"after scrolling; saw {current} gridcells. First 30: {sampled}"
+            ) from e
+
+        # After scroll the rate cell exists; locate it + walk to its row's price cell.
+        # In production each rate row contributes exactly 4 sibling gridcells:
+        # [rate, payment, credits, price]. Sibling traversal is more robust than
+        # global indexing because virtualization re-indexes cells as you scroll.
+        price_text = await rate_locator.first.evaluate(
+            """el => {
+                // Find the row container, then walk 3 siblings forward to the price cell.
+                let row = el.closest('[role="row"]') || el.parentElement;
+                if (!row) return null;
+                const rowCells = Array.from(row.querySelectorAll('[role="gridcell"]'));
+                const idx = rowCells.indexOf(el);
+                if (idx < 0 || idx + 3 >= rowCells.length) return null;
+                return rowCells[idx + 3].textContent;
+            }"""
+        )
+        if not price_text:
+            raise PortalParseError(
+                f"Could not locate price cell for rate {target_rate}"
+            )
+        price_text = price_text.strip()
 
         match = _PRICE_PATTERN.search(price_text)
         if not match:
-            raise PortalParseError(f"Could not parse final price from {price_text!r}")
+            raise PortalParseError(
+                f"Could not parse final price from {price_text!r}"
+            )
         final_price = Decimal(match.group(1))
 
-        # v1: skip LLPA scraping. To enable in v1.5, click `getByTestId("show-rate-stack")`
-        # and read the expanded rows here.
+        # v1: no LLPA scraping. The rate-stack expansion exposes only roll-ups
+        # in this view; itemized LLPAs are deferred to v1.5.
 
         snapshot_dir = Path("data/screenshots")
         snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -115,7 +158,7 @@ class AdMortgageAdapter(PortalAdapter):
 
         return PortalResult(
             final_price=final_price,
-            adjustments=[],  # not scraped in v1; see recon doc
+            adjustments=[],
             raw_html_snapshot_path=str(snapshot_path),
             captured_at=datetime.now(UTC),
         )

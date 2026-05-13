@@ -13,36 +13,25 @@ _RESULT_HTML = """
 <!doctype html>
 <html><body>
   <div class="MuiDataGrid-root">
-    <div class="MuiDataGrid-row" role="row">
+    <div role="row">
       <div role="gridcell">6.625</div>
-      <div>premium</div>
-      <div>x</div>
-      <div>-2.000% / -$8000</div>
+      <div role="gridcell">$2,500.00</div>
+      <div role="gridcell">$0.00</div>
+      <div role="gridcell">-2.000% / -$8000</div>
     </div>
-    <div class="MuiDataGrid-row" role="row">
+    <div role="row">
       <div role="gridcell">6.875</div>
-      <div>par</div>
-      <div>x</div>
-      <div>-2.445% / -$9780</div>
+      <div role="gridcell">$2,650.00</div>
+      <div role="gridcell">$0.00</div>
+      <div role="gridcell">-2.445% / -$9780</div>
     </div>
-    <div class="MuiDataGrid-row" role="row">
+    <div role="row">
       <div role="gridcell">7.000</div>
-      <div>discount</div>
-      <div>x</div>
-      <div>-2.875% / -$11500</div>
+      <div role="gridcell">$2,700.00</div>
+      <div role="gridcell">$0.00</div>
+      <div role="gridcell">-2.875% / -$11500</div>
     </div>
   </div>
-  <script>
-    // Mark a row selected after a gridcell click.
-    document.querySelectorAll('div[role="gridcell"]').forEach(cell => {
-      cell.addEventListener('click', (e) => {
-        document.querySelectorAll('.MuiDataGrid-row').forEach(
-          r => r.classList.remove('Mui-selected')
-        );
-        cell.parentElement.classList.add('Mui-selected');
-      });
-    });
-  </script>
 </body></html>
 """
 
