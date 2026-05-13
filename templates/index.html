@@ -4,13 +4,139 @@
   <meta charset="utf-8">
   <title>check-rate</title>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/htmx-sse.js"></script>
 </head>
 <body>
   <h1>check-rate</h1>
-  <p>MOSO vs lender-portal pricing comparison.</p>
-  <div id="form-host"></div>
+
+  <form id="scenario-form">
+    <label>Lender:
+      <select name="lender">
+        <option value="ad_mortgage">AD Mortgage</option>
+      </select>
+    </label>
+    <label>Loan amount: <input type="number" name="loan_amount" value="400000" required></label>
+    <label>Credit score: <input type="number" name="credit_score" value="740" required></label>
+    <label>Property value: <input type="number" name="property_value" value="500000" required></label>
+    <label>LTV: <input type="number" step="0.01" name="ltv" value="80" required></label>
+    <label>Occupancy:
+      <select name="occupancy">
+        <option value="primary_residence">Primary</option>
+        <option value="second_home">Second home</option>
+        <option value="investment">Investment</option>
+      </select>
+    </label>
+    <label>Property type:
+      <select name="property_type">
+        <option value="single_family">SFR</option>
+        <option value="condo">Condo</option>
+        <option value="pud">PUD</option>
+        <option value="2_to_4_unit">2-4 unit</option>
+      </select>
+    </label>
+    <label>Purpose:
+      <select name="purpose">
+        <option value="purchase">Purchase</option>
+        <option value="refinance">Refi</option>
+        <option value="cashout">Cash-out</option>
+      </select>
+    </label>
+    <label>Program: <input type="text" name="loan_program" value="30yr Fixed Conv"></label>
+    <input type="hidden" name="loan_type" value="conventional">
+    <label>Target rate: <input type="number" step="0.001" name="target_rate" value="6.875" required></label>
+    <button id="compare-btn" type="button" onclick="startCompare()">Compare</button>
+  </form>
+
   <div id="progress"></div>
+  <div id="mfa-modal" hidden>
+    <p>MFA required for <span id="mfa-lender"></span></p>
+    <input id="mfa-code" type="text" autocomplete="one-time-code">
+    <button onclick="submitMfa()">Submit code</button>
+  </div>
   <div id="report"></div>
+
+<script>
+let currentSession = null;
+
+async function startCompare() {
+  const form = document.getElementById("scenario-form");
+  const data = Object.fromEntries(new FormData(form));
+  const payload = {
+    lender: data.lender,
+    scenario: {
+      loan_amount: Number(data.loan_amount),
+      credit_score: Number(data.credit_score),
+      property_value: Number(data.property_value),
+      ltv: Number(data.ltv),
+      occupancy: data.occupancy,
+      property_type: data.property_type,
+      purpose: data.purpose,
+      loan_program: data.loan_program,
+      loan_type: data.loan_type,
+      target_rate: Number(data.target_rate),
+    },
+  };
+  document.getElementById("progress").innerHTML = "Starting…";
+  const r = await fetch("/compare", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    document.getElementById("progress").innerText = "Request failed: " + r.status;
+    return;
+  }
+  currentSession = (await r.json()).session_id;
+  const es = new EventSource("/events/stream?session_id=" + currentSession);
+  es.addEventListener("progress", ev => {
+    const d = JSON.parse(ev.data);
+    document.getElementById("progress").innerHTML += "<br>" + d.step + ": " + d.status;
+  });
+  es.addEventListener("mfa_required", ev => {
+    const d = JSON.parse(ev.data);
+    document.getElementById("mfa-lender").innerText = d.lender;
+    document.getElementById("mfa-modal").hidden = false;
+  });
+  es.addEventListener("error", ev => {
+    document.getElementById("progress").innerHTML += "<br><span class=mismatch>error: " + ev.data + "</span>";
+    es.close();
+  });
+  es.addEventListener("done", async ev => {
+    const d = JSON.parse(ev.data);
+    const r = await fetch("/report/" + d.report_id);
+    const report = await r.json();
+    renderReport(report);
+    es.close();
+  });
+}
+
+async function submitMfa() {
+  const code = document.getElementById("mfa-code").value;
+  await fetch("/mfa/" + currentSession + "/code", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({code}),
+  });
+  document.getElementById("mfa-modal").hidden = true;
+}
+
+function renderReport(report) {
+  const rows = [];
+  rows.push(`<tr><td>final_price</td><td>${report.moso.final_price}</td><td>${report.portal.final_price}</td><td>${report.matches ? "<span class=match>match</span>" : "<span class=mismatch>mismatch</span>"}</td></tr>`);
+  const allLabels = new Set([
+    ...report.moso.adjustments.map(a => a.label.toLowerCase().trim()),
+    ...report.portal.adjustments.map(a => a.label.toLowerCase().trim()),
+  ]);
+  const mosoMap = Object.fromEntries(report.moso.adjustments.map(a => [a.label.toLowerCase().trim(), a.amount]));
+  const portalMap = Object.fromEntries(report.portal.adjustments.map(a => [a.label.toLowerCase().trim(), a.amount]));
+  const mismatchLabels = new Set(report.mismatches.map(m => m.field.replace(/^adjustment:/, "")));
+  for (const label of allLabels) {
+    const cls = mismatchLabels.has(label) ? "mismatch" : "match";
+    rows.push(`<tr><td>${label}</td><td>${mosoMap[label] ?? "—"}</td><td>${portalMap[label] ?? "—"}</td><td class="${cls}">${mismatchLabels.has(label) ? "mismatch" : "match"}</td></tr>`);
+  }
+  document.getElementById("report").innerHTML =
+    `<h2>Result: ${report.matches ? "<span class=match>MATCH</span>" : "<span class=mismatch>MISMATCH</span>"}</h2>
+     <table><thead><tr><th>field</th><th>MOSO</th><th>Portal</th><th>status</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
+}
+</script>
 </body>
 </html>
