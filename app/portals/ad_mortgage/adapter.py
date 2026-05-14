@@ -10,9 +10,56 @@ from typing import Any, ClassVar
 from uuid import uuid4
 
 from app.mfa.bridge import MfaBridge
-from app.models import Adjustment, PortalResult, Scenario
+from app.models import (
+    Adjustment,
+    Occupancy,
+    PortalResult,
+    PropertyType,
+    Purpose,
+    Scenario,
+)
 from app.portals.base import PortalAdapter, register_adapter
 from app.secrets.store import Credentials
+
+# Stable container test_ids for each dropdown FIELD (verified via codegen).
+# Option ids inside each dropdown ("6-175" etc.) are NOT stable, so we open
+# the field by container then click the option by visible text.
+_FIELD_TESTID_OCCUPANCY = "6"
+_FIELD_TESTID_PURPOSE = "7"
+_FIELD_TESTID_PROPERTY_TYPE = "8"
+_FIELD_TESTID_UNITS = "13"
+_FIELD_TESTID_PROGRAM_TYPE = "19"  # Standard / Hi-Bal / etc.
+_FIELD_TESTID_LOAN_TERM = "2"      # Year Fixed / ARM
+
+
+# Scenario enum → visible option text inside each portal dropdown.
+# "Verified" entries were captured by codegen; "guess" entries need a
+# live trial run to confirm the exact label text.
+_OCCUPANCY_LABEL: dict[Occupancy, str] = {
+    Occupancy.PRIMARY:    "Primary Residence",   # verified
+    Occupancy.SECOND:     "Second Home",         # guess
+    Occupancy.INVESTMENT: "Investment",          # guess
+}
+
+_PURPOSE_LABEL: dict[Purpose, str] = {
+    Purpose.PURCHASE: "Purchase",                # verified
+    Purpose.REFI:     "Refinance",               # guess
+    Purpose.CASHOUT:  "Cash Out",                # guess
+}
+
+_PROPERTY_TYPE_LABEL: dict[PropertyType, str] = {
+    PropertyType.SFR:         "Unit SFR",         # verified (oddly worded by portal)
+    PropertyType.CONDO:       "Condo",            # guess
+    PropertyType.PUD:         "PUD",              # guess
+    PropertyType.TWO_TO_FOUR: "2-4 Unit",         # guess
+}
+
+_UNITS_LABEL: dict[int, str] = {
+    1: "1 Unit",   # verified
+    2: "2 Units",  # guess
+    3: "3 Units",  # guess
+    4: "4 Units",  # guess
+}
 
 _PRICE_PATTERN = re.compile(r"([-+]?\d+\.\d+)%")
 
@@ -57,30 +104,65 @@ class AdMortgageAdapter(PortalAdapter):
         )
 
     async def fill_scenario(self, page: Any, scenario: Scenario) -> None:
+        """Drive the AIM Quick Pricer Pro form using values from `scenario`.
+
+        Each dropdown is filled by opening its container (stable test_id)
+        and clicking the option by visible text from the corresponding
+        mapping table. This is robust against MUI's session-varying option
+        ids while still scenario-driven.
+        """
         # Open Quick Pricer Pro from the banner menu.
         await page.get_by_role("banner").get_by_role("button").click()
         await page.get_by_text("Quick Pricer Pro").click()
         await page.get_by_role("tab", name="Conventional").click()
 
-        # The codegen recorded position-dependent test-ids. v1 uses them verbatim;
-        # if they shift in production, the live test will catch it (Task 23).
-        await page.get_by_text("Primary Residence").click()
-        await page.get_by_test_id("6-175").click()
-        await page.get_by_text("Unit SFR").click()
-        await page.get_by_test_id("8-183").click()
-        await page.get_by_test_id("13").get_by_text("1 Unit").click()
-        await page.get_by_test_id("13-257").click()
-        await page.get_by_role("textbox", name="ZIP").fill("95132")
-        await page.get_by_text("Purchase").click()
-        await page.get_by_test_id("7-178").click()
-        await page.get_by_test_id("19").get_by_text("Standard").click()
-        await page.get_by_test_id("19-370").click()
-        await page.get_by_test_id("2").get_by_text("Year Fixed").click()
-        await page.get_by_test_id("2-3").click()
+        # ----- Dropdowns from scenario -----
+        await self._pick(
+            page, _FIELD_TESTID_OCCUPANCY,
+            _OCCUPANCY_LABEL[scenario.occupancy],
+        )
+        await self._pick(
+            page, _FIELD_TESTID_PROPERTY_TYPE,
+            _PROPERTY_TYPE_LABEL[scenario.property_type],
+        )
+        await self._pick(
+            page, _FIELD_TESTID_UNITS,
+            _UNITS_LABEL[scenario.actual_number_of_units],
+        )
+        # ----- ZIP from scenario -----
+        await page.get_by_role("textbox", name="ZIP").fill(scenario.zip)
+        # ----- More dropdowns -----
+        await self._pick(
+            page, _FIELD_TESTID_PURPOSE,
+            _PURPOSE_LABEL[scenario.purpose],
+        )
+        # Program / term are fixed for v1 (Standard 30-yr Fixed Conv).
+        await self._pick(page, _FIELD_TESTID_PROGRAM_TYPE, "Standard")
+        await self._pick(page, _FIELD_TESTID_LOAN_TERM, "Year Fixed")
+
+        # ----- Numeric inputs -----
         await page.get_by_role("textbox", name="FICO").fill(str(scenario.credit_score))
         await page.get_by_role("textbox", name="FICO").press("Enter")
         await page.get_by_role("textbox", name="Loan Amount").fill(str(int(scenario.loan_amount)))
         await page.get_by_role("textbox", name="CLTV").fill(str(int(scenario.ltv)))
+
+    async def _pick(self, page: Any, field_testid: str, option_text: str) -> None:
+        """Open a Quick Pricer Pro dropdown by its container test_id, then
+        select the option whose visible text matches `option_text`.
+
+        The container click opens the menu. MUI Select renders options as
+        `<li role="option">`; we use Playwright's role/name locator with
+        an exact match for robustness against partial-substring collisions
+        (e.g. selecting "1 Unit" without matching "2-4 Unit").
+        """
+        await page.get_by_test_id(field_testid).click()
+        # Slight delay so the popover/animation has time to settle.
+        await page.wait_for_timeout(150)
+        option = page.get_by_role("option", name=option_text, exact=True)
+        if await option.count() == 0:
+            # Fallback: try clicking by raw text inside the open menu.
+            option = page.get_by_text(option_text, exact=True)
+        await option.first.click()
 
     async def submit(self, page: Any) -> None:
         # Quick Pricer Pro is reactive — no submit button.
