@@ -391,6 +391,67 @@ button.btn-primary:disabled { background: #94A3B8; border-color: #94A3B8; opacit
   border: 1px solid var(--cr-border);
 }
 
+/* ===== FICO slider ===== */
+.cr-fico-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--bs-primary);
+  background: var(--cr-primary-soft);
+  padding: 0.1rem 0.55rem;
+  border-radius: 6px;
+  min-width: 48px;
+  text-align: center;
+}
+.form-range.cr-range {
+  margin: 0.35rem 0 0;
+}
+.form-range.cr-range::-webkit-slider-thumb {
+  background: var(--bs-primary);
+}
+.form-range.cr-range::-moz-range-thumb {
+  background: var(--bs-primary);
+  border: none;
+}
+.form-range.cr-range::-webkit-slider-runnable-track,
+.form-range.cr-range::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    #dc2626 0%, #f59e0b 30%, #16a34a 70%, #047857 100%
+  );
+  height: 4px;
+  border-radius: 2px;
+}
+.cr-range-bounds {
+  font-size: 0.7rem;
+  color: var(--cr-text-muted);
+  font-family: "Fira Code", monospace;
+  margin-top: 0.1rem;
+}
+
+/* ===== "More options" toggle ===== */
+.cr-more-toggle {
+  color: var(--cr-text-muted);
+  font-weight: 500;
+  text-decoration: none;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+.cr-more-toggle:hover { color: var(--bs-primary); }
+.cr-more-toggle .cr-chevron {
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+.cr-more-toggle[aria-expanded="true"] .cr-chevron {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-more-toggle .cr-chevron { transition: none; }
+}
+.cr-more-options {
+  border-top: 1px dashed var(--cr-border);
+  padding-top: 0.85rem;
+}
+
 /* MOSO session dot indicator */
 .cr-session-dot {
   display: inline-block;

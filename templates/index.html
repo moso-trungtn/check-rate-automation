@@ -58,201 +58,196 @@
         <div class="cr-card-body">
           <form id="scenario-form" autocomplete="off" novalidate>
 
-            <!-- ===== Lender ===== -->
-            <div class="section">
-              <p class="section-title">Lender</p>
-              <select class="form-select form-select-sm" id="lender" name="lender" aria-label="Lender">
-                <option value="ad_mortgage">AD Mortgage</option>
-              </select>
-            </div>
+            <!-- ===== Primary criteria (compact 2-col grid) ===== -->
+            <div class="row g-2">
 
-            <!-- ===== Loan basics ===== -->
-            <div class="section">
-              <p class="section-title">Loan basics</p>
-              <div class="row g-2">
-                <div class="col-12">
-                  <label for="purpose" class="form-label">Purpose</label>
-                  <select id="purpose" name="purpose" class="form-select form-select-sm">
-                    <option value="purchase">Purchase</option>
-                    <option value="refinance">Refinance</option>
-                    <option value="cashout">Cash-out</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <label for="loan_amount" class="form-label">Loan amount</label>
-                  <div class="input-group input-group-sm">
-                    <span class="input-group-text">$</span>
-                    <input id="loan_amount" type="number" name="loan_amount" class="form-control" value="400000" required>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <label for="property_value" class="form-label">Property value</label>
-                  <div class="input-group input-group-sm">
-                    <span class="input-group-text">$</span>
-                    <input id="property_value" type="number" name="property_value" class="form-control" value="500000" required>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <label for="ltv" class="form-label">LTV</label>
-                  <div class="input-group input-group-sm">
-                    <input id="ltv" type="number" step="0.01" name="ltv" class="form-control" value="80" required>
-                    <span class="input-group-text">%</span>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <label for="credit_score" class="form-label">FICO</label>
-                  <input id="credit_score" type="number" name="credit_score" class="form-control form-control-sm" value="740" required>
-                </div>
-                <div class="col-12">
-                  <label for="target_rate" class="form-label">Target rate</label>
-                  <div class="input-group input-group-sm">
-                    <input id="target_rate" type="number" step="0.001" name="target_rate" class="form-control" value="6.875" required>
-                    <span class="input-group-text">%</span>
-                  </div>
-                  <div class="form-text">Try <span class="cr-kbd">6.875</span> · <span class="cr-kbd">6.625</span> · <span class="cr-kbd">6.490</span></div>
-                </div>
-                <div class="col-12">
-                  <label for="loan_program" class="form-label">Program</label>
-                  <input id="loan_program" type="text" name="loan_program" class="form-control form-control-sm" value="30yr Fixed Conv">
-                </div>
-                <input type="hidden" name="loan_type" value="conventional">
+              <div class="col-12">
+                <label for="lender" class="form-label">Lender</label>
+                <select class="form-select form-select-sm" id="lender" name="lender">
+                  <option value="ad_mortgage">AD Mortgage</option>
+                </select>
               </div>
-            </div>
 
-            <!-- ===== Property ===== -->
-            <div class="section">
-              <p class="section-title">Property</p>
-              <div class="row g-2">
-                <div class="col-12">
-                  <label for="occupancy" class="form-label">Occupancy</label>
-                  <select id="occupancy" name="occupancy" class="form-select form-select-sm">
-                    <option value="primary_residence">Primary residence</option>
-                    <option value="second_home">Second home</option>
-                    <option value="investment">Investment</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <label for="property_type" class="form-label">Property type</label>
-                  <select id="property_type" name="property_type" class="form-select form-select-sm" onchange="updateConditionalFields()">
-                    <option value="single_family">Single family</option>
-                    <option value="condo">Condo</option>
-                    <option value="pud">PUD</option>
-                    <option value="2_to_4_unit">2-4 unit</option>
-                  </select>
-                </div>
-                <div class="col-6">
-                  <label for="actual_number_of_units" class="form-label">Units</label>
-                  <select id="actual_number_of_units" name="actual_number_of_units" class="form-select form-select-sm">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                  </select>
-                </div>
-                <div class="col-6" id="attachment-field" hidden>
-                  <label for="attachment_type" class="form-label">Attachment</label>
-                  <select id="attachment_type" name="attachment_type" class="form-select form-select-sm">
-                    <option value="detached">Detached</option>
-                    <option value="attached">Attached</option>
-                  </select>
+              <div class="col-6">
+                <label for="purpose" class="form-label">Purpose</label>
+                <select id="purpose" name="purpose" class="form-select form-select-sm">
+                  <option value="purchase">Purchase</option>
+                  <option value="refinance">Refinance</option>
+                  <option value="cashout">Cash-out</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label for="loan_program" class="form-label">Program</label>
+                <select id="loan_program" name="loan_program" class="form-select form-select-sm">
+                  <option value="30yr Fixed Conv">30 Year Fixed</option>
+                </select>
+              </div>
+
+              <div class="col-6">
+                <label for="loan_amount" class="form-label">Loan amount</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">$</span>
+                  <input id="loan_amount" type="number" name="loan_amount" class="form-control" value="400000" required>
                 </div>
               </div>
-            </div>
-
-            <!-- ===== Location ===== -->
-            <div class="section">
-              <p class="section-title">Location</p>
-              <div class="row g-2">
-                <div class="col-4">
-                  <label for="state" class="form-label">State</label>
-                  <input id="state" type="text" name="state" class="form-control form-control-sm" value="VA" maxlength="2" style="text-transform: uppercase;">
-                </div>
-                <div class="col-8">
-                  <label for="zip" class="form-label">ZIP</label>
-                  <input id="zip" type="text" name="zip" class="form-control form-control-sm" value="20155" maxlength="5">
-                </div>
-                <div class="col-12">
-                  <label for="county_name" class="form-label">County</label>
-                  <input id="county_name" type="text" name="county_name" class="form-control form-control-sm" value="Prince William">
+              <div class="col-6">
+                <label for="property_value" class="form-label">Property value</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">$</span>
+                  <input id="property_value" type="number" name="property_value" class="form-control" value="500000" required>
                 </div>
               </div>
-            </div>
 
-            <!-- ===== Borrower ===== -->
-            <div class="section">
-              <p class="section-title">Borrower</p>
-              <div class="row g-2">
-                <div class="col-6">
-                  <label for="debt_to_income" class="form-label">DTI</label>
-                  <div class="input-group input-group-sm">
-                    <input id="debt_to_income" type="number" name="debt_to_income" class="form-control" value="40" min="0" max="100">
-                    <span class="input-group-text">%</span>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <label for="financed_properties" class="form-label">Financed</label>
-                  <input id="financed_properties" type="number" name="financed_properties" class="form-control form-control-sm" value="1" min="1" max="20">
-                </div>
-                <div class="col-12 mt-2">
-                  <div class="form-check form-check-sm">
-                    <input class="form-check-input" type="checkbox" id="first_time_home_buyer" name="first_time_home_buyer">
-                    <label class="form-check-label" for="first_time_home_buyer">First-time home buyer</label>
-                  </div>
-                  <div class="form-check form-check-sm">
-                    <input class="form-check-input" type="checkbox" id="has_self_employed" name="has_self_employed">
-                    <label class="form-check-label" for="has_self_employed">Self-employed</label>
-                  </div>
+              <div class="col-6">
+                <label for="ltv" class="form-label">LTV</label>
+                <div class="input-group input-group-sm">
+                  <input id="ltv" type="number" step="0.01" name="ltv" class="form-control" value="80" required>
+                  <span class="input-group-text">%</span>
                 </div>
               </div>
-            </div>
-
-            <!-- ===== Loan options ===== -->
-            <div class="section">
-              <p class="section-title">Loan options</p>
-              <div class="row g-2">
-                <div class="col-12">
-                  <label for="lock_period" class="form-label">Lock period (days)</label>
-                  <select id="lock_period" name="lock_period" class="form-select form-select-sm">
-                    <option value="15">15</option>
-                    <option value="30" selected>30</option>
-                    <option value="45">45</option>
-                    <option value="60">60</option>
-                    <option value="90">90</option>
-                  </select>
-                </div>
-                <div class="col-12 mt-2">
-                  <div class="form-check form-check-sm">
-                    <input class="form-check-input" type="checkbox" id="impounds" name="impounds" checked>
-                    <label class="form-check-label" for="impounds">Impounds (escrow)</label>
-                  </div>
-                  <div class="form-check form-check-sm">
-                    <input class="form-check-input" type="checkbox" id="has_equity_loan" name="has_equity_loan">
-                    <label class="form-check-label" for="has_equity_loan">Has equity loan / subordinate financing</label>
-                  </div>
-                  <div class="form-check form-check-sm">
-                    <input class="form-check-input" type="checkbox" id="waive_lender_fee" name="waive_lender_fee">
-                    <label class="form-check-label" for="waive_lender_fee">Waive lender fee</label>
-                  </div>
+              <div class="col-6">
+                <label for="target_rate" class="form-label">Target rate</label>
+                <div class="input-group input-group-sm">
+                  <input id="target_rate" type="number" step="0.001" name="target_rate" class="form-control" value="6.875" required>
+                  <span class="input-group-text">%</span>
                 </div>
               </div>
+
+              <div class="col-12">
+                <div class="d-flex align-items-baseline justify-content-between">
+                  <label for="credit_score" class="form-label mb-0">FICO</label>
+                  <span class="cr-fico-value font-mono" id="credit_score_display">740</span>
+                </div>
+                <input
+                  id="credit_score" type="range" name="credit_score"
+                  class="form-range cr-range" min="620" max="850" step="1" value="740"
+                  oninput="document.getElementById('credit_score_display').textContent = this.value">
+                <div class="d-flex justify-content-between cr-range-bounds">
+                  <span>620</span><span>850</span>
+                </div>
+              </div>
+
+              <div class="col-6">
+                <label for="occupancy" class="form-label">Occupancy</label>
+                <select id="occupancy" name="occupancy" class="form-select form-select-sm">
+                  <option value="primary_residence">Primary</option>
+                  <option value="second_home">Second home</option>
+                  <option value="investment">Investment</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label for="property_type" class="form-label">Property type</label>
+                <select id="property_type" name="property_type" class="form-select form-select-sm" onchange="updateConditionalFields()">
+                  <option value="single_family">Single family</option>
+                  <option value="condo">Condo</option>
+                  <option value="pud">PUD</option>
+                  <option value="2_to_4_unit">2-4 unit</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label for="zip" class="form-label">ZIP</label>
+                <input id="zip" type="text" name="zip" class="form-control form-control-sm" value="20155" maxlength="5" inputmode="numeric" pattern="[0-9]{5}">
+              </div>
+
+              <!-- Hidden: derived defaults; auto-resolved from ZIP later. -->
+              <input type="hidden" name="state" value="VA">
+              <input type="hidden" name="county_name" value="Prince William">
+              <input type="hidden" name="loan_type" value="conventional">
             </div>
 
-            <!-- ===== Compensation ===== -->
-            <div class="section">
-              <p class="section-title">Compensation</p>
-              <div class="row g-2">
-                <div class="col-12">
-                  <label for="compensation_type" class="form-label">Type</label>
-                  <select id="compensation_type" name="compensation_type" class="form-select form-select-sm" onchange="updateConditionalFields()">
-                    <option value="borrower_paid">Borrower paid</option>
-                    <option value="lender_paid">Lender paid</option>
-                  </select>
-                </div>
-                <div class="col-12" id="comp-amount-field">
-                  <label for="borrower_paid_compensation" class="form-label">Compensation amount</label>
-                  <div class="input-group input-group-sm">
-                    <input id="borrower_paid_compensation" type="number" step="0.01" name="borrower_paid_compensation" class="form-control" value="1.0" min="0" max="10">
-                    <span class="input-group-text">%</span>
+            <!-- ===== Collapsible "More options" ===== -->
+            <div class="cr-more-options mt-2">
+              <button
+                class="btn btn-link btn-sm cr-more-toggle p-0"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#more-options-panel"
+                aria-expanded="false"
+                aria-controls="more-options-panel">
+                <i class="bi bi-chevron-right me-1 cr-chevron"></i>
+                More options
+              </button>
+
+              <div class="collapse mt-2" id="more-options-panel">
+                <div class="row g-2">
+
+                  <div class="col-6">
+                    <label for="actual_number_of_units" class="form-label">Units</label>
+                    <select id="actual_number_of_units" name="actual_number_of_units" class="form-select form-select-sm">
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                    </select>
+                  </div>
+                  <div class="col-6" id="attachment-field" hidden>
+                    <label for="attachment_type" class="form-label">Attachment</label>
+                    <select id="attachment_type" name="attachment_type" class="form-select form-select-sm">
+                      <option value="detached">Detached</option>
+                      <option value="attached">Attached</option>
+                    </select>
+                  </div>
+
+                  <div class="col-6">
+                    <label for="debt_to_income" class="form-label">DTI</label>
+                    <div class="input-group input-group-sm">
+                      <input id="debt_to_income" type="number" name="debt_to_income" class="form-control" value="40" min="0" max="100">
+                      <span class="input-group-text">%</span>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <label for="financed_properties" class="form-label">Financed properties</label>
+                    <input id="financed_properties" type="number" name="financed_properties" class="form-control form-control-sm" value="1" min="1" max="20">
+                  </div>
+
+                  <div class="col-6">
+                    <label for="lock_period" class="form-label">Lock (days)</label>
+                    <select id="lock_period" name="lock_period" class="form-select form-select-sm">
+                      <option value="15">15</option>
+                      <option value="30" selected>30</option>
+                      <option value="45">45</option>
+                      <option value="60">60</option>
+                      <option value="90">90</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label for="compensation_type" class="form-label">Comp type</label>
+                    <select id="compensation_type" name="compensation_type" class="form-select form-select-sm" onchange="updateConditionalFields()">
+                      <option value="borrower_paid">Borrower paid</option>
+                      <option value="lender_paid">Lender paid</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12" id="comp-amount-field">
+                    <label for="borrower_paid_compensation" class="form-label">Comp amount</label>
+                    <div class="input-group input-group-sm">
+                      <input id="borrower_paid_compensation" type="number" step="0.01" name="borrower_paid_compensation" class="form-control" value="1.0" min="0" max="10">
+                      <span class="input-group-text">%</span>
+                    </div>
+                  </div>
+
+                  <div class="col-12 mt-1">
+                    <div class="form-check form-check-sm">
+                      <input class="form-check-input" type="checkbox" id="impounds" name="impounds" checked>
+                      <label class="form-check-label" for="impounds">Impounds (escrow)</label>
+                    </div>
+                    <div class="form-check form-check-sm">
+                      <input class="form-check-input" type="checkbox" id="first_time_home_buyer" name="first_time_home_buyer">
+                      <label class="form-check-label" for="first_time_home_buyer">First-time home buyer</label>
+                    </div>
+                    <div class="form-check form-check-sm">
+                      <input class="form-check-input" type="checkbox" id="has_self_employed" name="has_self_employed">
+                      <label class="form-check-label" for="has_self_employed">Self-employed</label>
+                    </div>
+                    <div class="form-check form-check-sm">
+                      <input class="form-check-input" type="checkbox" id="has_equity_loan" name="has_equity_loan">
+                      <label class="form-check-label" for="has_equity_loan">Has equity / subordinate loan</label>
+                    </div>
+                    <div class="form-check form-check-sm">
+                      <input class="form-check-input" type="checkbox" id="waive_lender_fee" name="waive_lender_fee">
+                      <label class="form-check-label" for="waive_lender_fee">Waive lender fee</label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -262,6 +257,9 @@
               <i class="bi bi-arrow-left-right me-1"></i>
               <span class="btn-label">Compare prices</span>
             </button>
+            <div class="form-text mt-1 text-center">
+              Try rate <span class="cr-kbd">6.875</span> · <span class="cr-kbd">6.625</span> · <span class="cr-kbd">6.490</span>
+            </div>
           </form>
         </div>
       </div>
