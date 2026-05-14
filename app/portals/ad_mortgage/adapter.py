@@ -140,8 +140,8 @@ class AdMortgageAdapter(PortalAdapter):
         await self._pick(page, _FIELD_TESTID_PROGRAM_TYPE, "Standard")
         await self._pick(page, _FIELD_TESTID_LOAN_TERM, "30 Year Fixed")
 
-        # DTI is a separate text input; portal expects an integer percent.
-        await self._fill_if_present(page, "DTI", str(scenario.debt_to_income))
+        # DTI is a separate slider-paired input.
+        await self._fill_numeric(page, "DTI", str(scenario.debt_to_income))
 
         # ----- Checkboxes from scenario (BEFORE numeric inputs so the
         #       final FICO/Loan/CLTV fill triggers exactly one recalc) -----
@@ -159,10 +159,16 @@ class AdMortgageAdapter(PortalAdapter):
 
         # ----- Numeric inputs LAST so the final recalc is the only one
         #       that has to settle before submit() waits for the rate panel.
-        await page.get_by_role("textbox", name="FICO").fill(str(scenario.credit_score))
-        await page.get_by_role("textbox", name="FICO").press("Enter")
-        await page.get_by_role("textbox", name="Loan Amount").fill(str(int(scenario.loan_amount)))
-        await page.get_by_role("textbox", name="CLTV").fill(str(int(scenario.ltv)))
+        # Each field is paired with a slider; the displayed text input
+        # only commits its value to the slider on blur. Sequence: click
+        # the box, fill, Tab to blur, then verify the input actually
+        # holds the value we wanted. If it reverts (slider step rounded
+        # us), re-fill and blur once more before giving up — this is
+        # what was causing FICO 740 to read back as the 720-739 LLPA
+        # tier in earlier runs.
+        await self._fill_numeric(page, "FICO", str(scenario.credit_score))
+        await self._fill_numeric(page, "Loan Amount", str(int(scenario.loan_amount)))
+        await self._fill_numeric(page, "CLTV", str(int(scenario.ltv)))
 
     async def _fill_if_present(self, page: Any, label: str, value: str) -> None:
         """Fill a textbox by accessible name, no-op if not on the page."""
@@ -172,6 +178,49 @@ class AdMortgageAdapter(PortalAdapter):
                 await box.first.fill(value)
             except Exception:  # noqa: BLE001
                 pass  # field exists but is disabled / read-only
+
+    async def _fill_numeric(self, page: Any, label: str, value: str) -> None:
+        """Fill a slider-paired numeric input and verify the value sticks.
+
+        The Quick Pricer Pro pairs each numeric field (FICO, Loan Amount,
+        CLTV, DTI) with a MUI Slider. Typing into the text box doesn't
+        always commit the value to the slider on the first try; pressing
+        Tab forces blur which fires MUI's onChange. We then read back
+        the input.value and retry once if it didn't take.
+        """
+        box = page.get_by_role("textbox", name=label).first
+        for attempt in range(2):
+            await box.click()
+            await box.fill(value)
+            await box.press("Tab")
+            # Brief settle so the slider's onChange has time to fire.
+            await page.wait_for_timeout(150)
+            try:
+                current = await box.input_value()
+            except Exception:  # noqa: BLE001
+                current = ""
+            if current == value:
+                return
+            if attempt == 0:
+                print(
+                    f"[ad_mortgage] {label} fill read back {current!r} "
+                    f"(expected {value!r}) — retrying"
+                )
+        # Last resort: dispatch a synthetic input + change event so React
+        # treats the value as user-entered even if .fill didn't trigger it.
+        await box.evaluate(
+            """(el, v) => {
+                const native = Object.getOwnPropertyDescriptor(
+                  window.HTMLInputElement.prototype, 'value'
+                ).set;
+                native.call(el, v);
+                el.dispatchEvent(new Event('input', {bubbles: true}));
+                el.dispatchEvent(new Event('change', {bubbles: true}));
+            }""",
+            value,
+        )
+        await box.press("Tab")
+        await page.wait_for_timeout(200)
 
     async def _toggle_if_present(
         self, page: Any, label: str, desired_checked: bool,
@@ -308,24 +357,64 @@ class AdMortgageAdapter(PortalAdapter):
                 f"after scrolling; saw {current} gridcells. First 30: {sampled}"
             ) from e
 
-        # After scroll the rate cell exists; locate it + walk to its row's price cell.
-        # In production each rate row contributes exactly 4 sibling gridcells:
-        # [rate, payment, credits, price]. Sibling traversal is more robust than
-        # global indexing because virtualization re-indexes cells as you scroll.
-        price_text = await rate_locator.first.evaluate(
+        # Locate the price cell by COLUMN HEADER ("Final Price"), not by
+        # positional sibling offset. The rate ladder DataGrid sometimes
+        # carries an extra "Compare" checkbox column on the left; when it
+        # does, idx+3 from the rate cell lands one column shy of Price
+        # (the original cells[idx+3] approach produced values off by ~0.75
+        # because we picked the MI / credits column instead). Header
+        # indexing handles any number of layout variants.
+        price_scrape: dict[str, Any] = await rate_locator.first.evaluate(  # pyright: ignore[reportAny]
             """el => {
-                // Find the row container, then walk 3 siblings forward to the price cell.
-                let row = el.closest('[role="row"]') || el.parentElement;
-                if (!row) return null;
-                const rowCells = Array.from(row.querySelectorAll('[role="gridcell"]'));
-                const idx = rowCells.indexOf(el);
-                if (idx < 0 || idx + 3 >= rowCells.length) return null;
-                return rowCells[idx + 3].textContent;
+                const grid = el.closest('.MuiDataGrid-root');
+                if (!grid) return {error: 'rate cell not inside a DataGrid'};
+                // Find the column index for 'Final Price' via column header.
+                const headers = Array.from(grid.querySelectorAll('[role="columnheader"]'));
+                let priceIdx = headers
+                    .map(h => (h.textContent || '').trim())
+                    .findIndex(t => /final\\s*price/i.test(t));
+                // Fallback: first row may carry header role 'columnheader'
+                // on its cells or use the same role as data cells.
+                if (priceIdx < 0) {
+                  const firstRow = grid.querySelector('[role="row"]');
+                  if (firstRow) {
+                    const htexts = Array.from(firstRow.children)
+                      .map(c => (c.textContent || '').trim());
+                    priceIdx = htexts.findIndex(t => /final\\s*price/i.test(t));
+                  }
+                }
+                const row = el.closest('[role="row"]') || el.parentElement;
+                if (!row) return {error: 'rate cell has no row parent'};
+                const cells = Array.from(row.querySelectorAll('[role="gridcell"]'));
+                const cellTexts = cells.map(c => (c.textContent || '').trim());
+                if (priceIdx >= 0 && priceIdx < cells.length) {
+                  return {
+                    text: cellTexts[priceIdx],
+                    priceIdx,
+                    headers: headers.map(h => (h.textContent || '').trim()),
+                    cells: cellTexts,
+                  };
+                }
+                // Last-resort positional fallback (4-col layout).
+                const rateIdx = cells.indexOf(el);
+                if (rateIdx >= 0 && rateIdx + 3 < cells.length) {
+                  return {text: cellTexts[rateIdx + 3], fallback: 'positional', cells: cellTexts};
+                }
+                return {error: 'no Final Price column found', cells: cellTexts};
             }"""
         )
+        price_text: str = str(price_scrape.get("text") or "")
+        # Breadcrumb so future column shifts surface immediately.
+        print(
+            f"[ad_mortgage] rate-ladder scrape: rate={rate_text!r} "
+            f"price_idx={price_scrape.get('priceIdx')} "
+            f"headers={price_scrape.get('headers')} "
+            f"row_cells={price_scrape.get('cells')}"
+        )
         if not price_text:
+            err = price_scrape.get("error") or "unknown"
             raise PortalParseError(
-                f"Could not locate price cell for rate {target_rate}"
+                f"Could not locate price cell for rate {target_rate}: {err}"
             )
         price_text = price_text.strip()
 
