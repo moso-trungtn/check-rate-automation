@@ -409,10 +409,26 @@ function escapeHtml(s) {
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[c]));
 }
-function norm(s) { return String(s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
+// Mirror app/compare/engine.py::normalize_label so the UI groups the same
+// way the server does. FICO LLPAs from MOSO ("FICO (740-759) and 75 <
+// LTV <= 80") and from the portal ("FICO 740-759 and Purchase") collapse
+// to one key: "fico 740-759". Sign convention may differ between sides
+// but the magnitude carries the meaning, so we compare with abs().
+const _FICO_RE = /fico\s*\(?\s*(\d{3})\s*-\s*(\d{3})\s*\)?/i;
+function norm(s) {
+  const lc = String(s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const m = lc.match(_FICO_RE);
+  if (m) return `fico ${m[1]}-${m[2]}`;
+  return lc;
+}
 function mapByLabel(adjs) {
   const out = {};
-  for (const a of adjs) out[norm(a.label)] = Number(a.amount);
+  for (const a of adjs) {
+    const key = norm(a.label);
+    // Keep the FIRST raw label we see for display purposes — the user
+    // gets to see MOSO's wording on MOSO rows, portal's on portal rows.
+    if (!(key in out)) out[key] = {label: a.label, amount: Number(a.amount)};
+  }
   return out;
 }
 function setResult(html) { document.getElementById('result-body').innerHTML = html; }
@@ -548,43 +564,70 @@ function renderReport(report) {
   `;
 
   // ----- Itemized adjustments -----
+  // Group by normalized key (FICO LLPAs from MOSO and portal collapse
+  // into one row). Compare by absolute value because the two sides use
+  // opposite sign conventions for the same economic effect.
+  const TOL = 0.001;
   const mosoMap = mapByLabel(report.moso.adjustments || []);
   const portalMap = mapByLabel(report.portal.adjustments || []);
-  const labels = Array.from(new Set([...Object.keys(mosoMap), ...Object.keys(portalMap)])).sort();
+  const allKeys = Array.from(new Set([...Object.keys(mosoMap), ...Object.keys(portalMap)])).sort();
+
+  let mosoAdjSum = 0, portalAdjSum = 0;
+  let missingInMoso = [], missingInPortal = [];
 
   let adjSection;
-  if (labels.length === 0) {
+  if (allKeys.length === 0) {
     adjSection = `
       <div class="cr-note">
         <strong>Itemized LLPAs</strong> — not exposed in this view.
-        MOSO's <code>commission_detail</code> contains only roll-ups for AD Mortgage, and v1 portal scraping reads
-        only the final price column. v1.5 will click the rate cell to open the LLPA dropdown and itemize them.
       </div>
     `;
   } else {
     let rows = '';
-    for (const label of labels) {
-      const m = mosoMap[label];
-      const p = portalMap[label];
-      const field = 'adjustment:' + label;
-      const isMm = mismatchFields.has(field);
-      const cls = isMm ? 'mismatch' : 'match';
-      let badge;
-      if (m === undefined) badge = '<span class="cr-badge portal-only">portal only</span>';
-      else if (p === undefined) badge = '<span class="cr-badge moso-only">MOSO only</span>';
-      else if (isMm) badge = `<span class="cr-badge mismatch">Δ ${signedFmt(p - m)}</span>`;
-      else badge = '<span class="cr-badge match">match</span>';
+    for (const key of allKeys) {
+      const m = mosoMap[key];
+      const p = portalMap[key];
+      const mVal = m ? m.amount : undefined;
+      const pVal = p ? p.amount : undefined;
+      const display = (m && m.label) || (p && p.label) || key;
+
+      if (mVal !== undefined) mosoAdjSum += mVal;
+      if (pVal !== undefined) portalAdjSum += pVal;
+
+      let badge, rowCls;
+      if (mVal === undefined) {
+        // Portal has it, MOSO doesn't — real "missing in MOSO" finding.
+        badge = '<span class="cr-badge portal-only">missing in MOSO</span>';
+        rowCls = 'mismatch';
+        missingInMoso.push({label: display, amount: pVal});
+      } else if (pVal === undefined) {
+        // MOSO has it, portal doesn't.
+        badge = '<span class="cr-badge moso-only">missing in portal</span>';
+        rowCls = 'mismatch';
+        missingInPortal.push({label: display, amount: mVal});
+      } else if (Math.abs(Math.abs(mVal) - Math.abs(pVal)) <= TOL) {
+        // Magnitudes match — same LLPA, just different sign convention.
+        badge = (Math.sign(mVal) !== Math.sign(pVal) && mVal !== 0 && pVal !== 0)
+          ? '<span class="cr-badge match">match (±)</span>'
+          : '<span class="cr-badge match">match</span>';
+        rowCls = 'match';
+      } else {
+        // Magnitudes really differ — flag as value mismatch.
+        const delta = Math.abs(pVal) - Math.abs(mVal);
+        badge = `<span class="cr-badge mismatch">|Δ| ${signedFmt(delta)}</span>`;
+        rowCls = 'mismatch';
+      }
       rows += `
-        <tr class="${cls}">
-          <td><span class="field">${escapeHtml(label)}</span></td>
-          <td class="num ${m === undefined ? 'empty' : ''}">${m === undefined ? '—' : fmt(m)}</td>
-          <td class="num ${p === undefined ? 'empty' : ''}">${p === undefined ? '—' : fmt(p)}</td>
+        <tr class="${rowCls}">
+          <td><span class="field">${escapeHtml(display)}</span></td>
+          <td class="num ${mVal === undefined ? 'empty' : ''}">${mVal === undefined ? '—' : fmt(mVal)}</td>
+          <td class="num ${pVal === undefined ? 'empty' : ''}">${pVal === undefined ? '—' : fmt(pVal)}</td>
           <td class="text-end">${badge}</td>
         </tr>
       `;
     }
     adjSection = `
-      <div class="cr-section-label">Itemized adjustments</div>
+      <div class="cr-section-label">Itemized adjustments <span class="hint">— grouped by FICO range; sign convention may differ</span></div>
       <div class="table-responsive">
         <table class="table cr-compare mb-0">
           <thead>
@@ -601,7 +644,51 @@ function renderReport(report) {
     `;
   }
 
-  setResult(banner + metrics + priceTable + adjSection);
+  // ----- Diagnostic banner: "Where's the discrepancy?" -----
+  // If final_price doesn't match BUT itemized adjustment totals do (by
+  // magnitude), the discrepancy is in BASE PRICE — point the user at
+  // the ratesheet. Otherwise list which LLPAs are missing or differ.
+  const finalPriceMatches = !mismatchFields.has('final_price');
+  const adjTotalsMatch = Math.abs(Math.abs(mosoAdjSum) - Math.abs(portalAdjSum)) <= TOL;
+  const hasMissingLLPAs = missingInMoso.length > 0 || missingInPortal.length > 0;
+
+  let diagnostic = '';
+  if (!finalPriceMatches && adjTotalsMatch && !hasMissingLLPAs && allKeys.length > 0) {
+    diagnostic = `
+      <div class="cr-note" style="background: var(--cr-warning-soft); border-top: 4px solid var(--bs-warning); color: #92400E;">
+        <strong><i class="bi bi-exclamation-triangle me-1"></i>Adjustments match, Lender Credits don't.</strong>
+        Both sides have the same itemized LLPAs and same total magnitude, but the final Lender Credits differ by
+        <strong>${signedFmt(delta)}</strong>.
+        <br>
+        → <strong>Please check the base price of the lender in the ratesheet.</strong>
+        The discrepancy is in MOSO's <code>base_price</code>, not in the LLPAs.
+      </div>
+    `;
+  } else if (missingInMoso.length > 0) {
+    const items = missingInMoso.map(x =>
+      `<li><strong>${escapeHtml(x.label)}</strong> (portal value <code>${fmt(x.amount)}</code>)</li>`
+    ).join('');
+    diagnostic = `
+      <div class="cr-note" style="background: var(--cr-danger-soft); border-top: 4px solid var(--bs-danger); color: #991B1B;">
+        <strong><i class="bi bi-exclamation-octagon me-1"></i>MOSO is missing adjustments the portal applies:</strong>
+        <ul class="mb-0 mt-1">${items}</ul>
+        → Update MOSO's parser / adjustment tables to capture these.
+      </div>
+    `;
+  } else if (missingInPortal.length > 0) {
+    const items = missingInPortal.map(x =>
+      `<li><strong>${escapeHtml(x.label)}</strong> (MOSO value <code>${fmt(x.amount)}</code>)</li>`
+    ).join('');
+    diagnostic = `
+      <div class="cr-note" style="background: var(--cr-warning-soft); border-top: 4px solid var(--bs-warning); color: #92400E;">
+        <strong><i class="bi bi-info-circle me-1"></i>Portal didn't surface adjustments MOSO has:</strong>
+        <ul class="mb-0 mt-1">${items}</ul>
+        → May be expected if the portal hides certain LLPAs; check if your scenario actually triggers them on the portal.
+      </div>
+    `;
+  }
+
+  setResult(banner + metrics + priceTable + diagnostic + adjSection);
 }
 
 // ============== Render error ==============
