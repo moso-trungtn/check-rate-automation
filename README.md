@@ -9,7 +9,22 @@ Compare MOSO's pricing against a lender's portal for a single scenario.
 - Compare mode: one user-chosen rate; final price only (LLPA breakdown deferred to v1.5)
 - MOSO endpoint: `POST /exec/GetRatesOp` (full rate ladder + adjustments in one call)
 
-## Setup
+## Run with Docker (recommended for non-tech users)
+
+Requires Docker Desktop.
+
+    cp .env.example .env       # edit CHECK_RATE_PASSPHRASE at minimum
+    docker compose up -d       # first build takes ~2 min (Playwright base image)
+    # open http://localhost:8080
+
+To stop: `docker compose down`. Logs: `docker compose logs -f`.
+
+Credentials and MOSO session headers live in the `./data/` folder on your
+host and are bind-mounted into the container, so they survive restarts.
+Use the in-browser **MOSO session** button to refresh the staging
+session when it expires — no terminal needed.
+
+## Setup (local Python)
 
 Requires Python 3.11+ and `uv` (`brew install uv` on macOS).
 
@@ -34,7 +49,7 @@ or a full session (XSRF + user + Cookie). See `docs/moso-endpoint-recon.md` for 
 
 The encrypted file lives in `data/` (gitignored).
 
-## Run
+## Run (local Python)
 
     uv run uvicorn --factory app.main:create_app --reload --port 8080
     # open http://localhost:8080

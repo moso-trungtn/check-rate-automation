@@ -1,0 +1,33 @@
+# Don't bake secrets or local state into the image.
+.env
+.env.*
+data/
+*.enc
+*.key
+*.pem
+
+# Local dev artifacts.
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+playwright-report/
+test-results/
+
+# VCS / editor.
+.git/
+.gitignore
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Tests + recon docs not needed in the runtime image (keeps the image small).
+tests/
+docs/
+README.md
+CLAUDE.md

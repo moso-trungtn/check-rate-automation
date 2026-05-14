@@ -1,0 +1,22 @@
+services:
+  check-rate:
+    build: .
+    image: check-rate:latest
+    container_name: check-rate
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Required: where MOSO lives + how to decrypt data/credentials.enc.
+      MOSO_BASE_URL: ${MOSO_BASE_URL:-https://www.viet18.com}
+      MOSO_HEADERS_FILE: /app/data/moso-headers.json
+      CHECK_RATE_PASSPHRASE: ${CHECK_RATE_PASSPHRASE:?CHECK_RATE_PASSPHRASE must be set in .env or environment}
+      COMPARE_TOLERANCE: ${COMPARE_TOLERANCE:-0.001}
+    volumes:
+      # Persist credentials, sessions, reports, screenshots, logs across
+      # container restarts. Sensitive — never committed.
+      - ./data:/app/data
+    # Headless Chromium runs fine inside this image — no /dev/shm tricks
+    # needed for our scenarios (small DataGrid pages, no big media).
+    # If you ever hit out-of-memory in browser, uncomment shm_size:
+    # shm_size: 1gb
