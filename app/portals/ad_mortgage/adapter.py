@@ -150,19 +150,48 @@ class AdMortgageAdapter(PortalAdapter):
         """Open a Quick Pricer Pro dropdown by its container test_id, then
         select the option whose visible text matches `option_text`.
 
-        The container click opens the menu. MUI Select renders options as
-        `<li role="option">`; we use Playwright's role/name locator with
-        an exact match for robustness against partial-substring collisions
-        (e.g. selecting "1 Unit" without matching "2-4 Unit").
+        The container click opens the menu (`role=listbox` inside a
+        `MuiPopover-root`). MUI renders options as `<li role="option">`,
+        so we wait for the listbox, click the option scoped to it (avoids
+        matching stale text elsewhere on the page), then wait for the
+        popover to fully detach — otherwise the next dropdown's backdrop
+        will be intercepted by the previous one's still-animating-out
+        modal.
         """
         await page.get_by_test_id(field_testid).click()
-        # Slight delay so the popover/animation has time to settle.
-        await page.wait_for_timeout(150)
-        option = page.get_by_role("option", name=option_text, exact=True)
+        # Wait for the menu listbox to actually be in the DOM, not a
+        # fixed sleep — handles slow popover open animations.
+        await page.wait_for_selector('[role="listbox"]', timeout=5_000)
+
+        # Scope option lookup to the open listbox so we never match text
+        # elsewhere on the page (the field's own displayed value etc.).
+        listbox = page.locator('[role="listbox"]').last
+        option = listbox.get_by_role("option", name=option_text, exact=True)
         if await option.count() == 0:
-            # Fallback: try clicking by raw text inside the open menu.
-            option = page.get_by_text(option_text, exact=True)
+            # Fallback: raw text within the listbox only.
+            option = listbox.get_by_text(option_text, exact=True)
+        if await option.count() == 0:
+            # Last resort: dump what IS in the listbox so the user sees
+            # which label they actually need to put in the mapping.
+            visible = await listbox.locator('[role="option"]').all_text_contents()
+            raise PortalParseError(
+                f"AD Mortgage dropdown (test_id={field_testid!r}) has no "
+                f"option {option_text!r}. Visible options: {visible}"
+            )
         await option.first.click()
+
+        # Critical: wait for the popover + backdrop to fully detach before
+        # returning, otherwise the next _pick() will fail with
+        # 'MuiBackdrop subtree intercepts pointer events'.
+        try:
+            await page.wait_for_selector(
+                ".MuiPopover-root", state="detached", timeout=3_000,
+            )
+        except Exception:  # noqa: BLE001
+            # If MUI ever leaves it cached/hidden rather than detached,
+            # press Escape to force-close so we don't deadlock the run.
+            await page.keyboard.press("Escape")
+            await page.wait_for_timeout(200)
 
     async def submit(self, page: Any) -> None:
         # Quick Pricer Pro is reactive — no submit button.
