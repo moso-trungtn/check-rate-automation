@@ -48,10 +48,10 @@ _PURPOSE_LABEL: dict[Purpose, str] = {
 }
 
 _PROPERTY_TYPE_LABEL: dict[PropertyType, str] = {
-    PropertyType.SFR:         "Unit SFR",         # verified (oddly worded by portal)
-    PropertyType.CONDO:       "Condo",            # guess
-    PropertyType.PUD:         "PUD",              # guess
-    PropertyType.TWO_TO_FOUR: "2-4 Unit",         # guess
+    PropertyType.SFR:         "1 Unit SFR",       # verified live
+    PropertyType.CONDO:       "Condo",            # verified live
+    PropertyType.PUD:         "PUD",              # verified live
+    PropertyType.TWO_TO_FOUR: "2-4 Units",        # verified live
 }
 
 _UNITS_LABEL: dict[int, str] = {
@@ -138,7 +138,7 @@ class AdMortgageAdapter(PortalAdapter):
         )
         # Program / term are fixed for v1 (Standard 30-yr Fixed Conv).
         await self._pick(page, _FIELD_TESTID_PROGRAM_TYPE, "Standard")
-        await self._pick(page, _FIELD_TESTID_LOAN_TERM, "Year Fixed")
+        await self._pick(page, _FIELD_TESTID_LOAN_TERM, "30 Year Fixed")
 
         # ----- Numeric inputs -----
         await page.get_by_role("textbox", name="FICO").fill(str(scenario.credit_score))
@@ -147,49 +147,64 @@ class AdMortgageAdapter(PortalAdapter):
         await page.get_by_role("textbox", name="CLTV").fill(str(int(scenario.ltv)))
 
     async def _pick(self, page: Any, field_testid: str, option_text: str) -> None:
-        """Open a Quick Pricer Pro dropdown by its container test_id, then
-        select the option whose visible text matches `option_text`.
+        """Open a Quick Pricer Pro dropdown and click an option by text.
 
-        The container click opens the menu (`role=listbox` inside a
-        `MuiPopover-root`). MUI renders options as `<li role="option">`,
-        so we wait for the listbox, click the option scoped to it (avoids
-        matching stale text elsewhere on the page), then wait for the
-        popover to fully detach — otherwise the next dropdown's backdrop
-        will be intercepted by the previous one's still-animating-out
-        modal.
+        MUI Select needs the inner element with `role="combobox"` clicked
+        (the displayed-value div), not the outer testid wrapper. After
+        opening, the option list lives inside the popover modal — MUI
+        may use role=listbox+option or role=menu+menuitem depending on
+        the control variant, so we try both plus a plain-text fallback.
         """
-        await page.get_by_test_id(field_testid).click()
-        # Wait for the menu listbox to actually be in the DOM, not a
-        # fixed sleep — handles slow popover open animations.
-        await page.wait_for_selector('[role="listbox"]', timeout=5_000)
+        # Open the menu. Prefer the inner combobox if MUI wraps one;
+        # fall back to clicking the outer testid container.
+        field = page.get_by_test_id(field_testid)
+        combobox = field.locator('[role="combobox"]')
+        if await combobox.count() > 0:
+            await combobox.first.click()
+        else:
+            await field.click()
 
-        # Scope option lookup to the open listbox so we never match text
-        # elsewhere on the page (the field's own displayed value etc.).
-        listbox = page.locator('[role="listbox"]').last
-        option = listbox.get_by_role("option", name=option_text, exact=True)
-        if await option.count() == 0:
-            # Fallback: raw text within the listbox only.
-            option = listbox.get_by_text(option_text, exact=True)
-        if await option.count() == 0:
-            # Last resort: dump what IS in the listbox so the user sees
-            # which label they actually need to put in the mapping.
-            visible = await listbox.locator('[role="option"]').all_text_contents()
-            raise PortalParseError(
-                f"AD Mortgage dropdown (test_id={field_testid!r}) has no "
-                f"option {option_text!r}. Visible options: {visible}"
-            )
+        # Wait for the option to appear anywhere on the page — works
+        # regardless of which MUI variant rendered the menu.
+        option = page.get_by_role("option", name=option_text, exact=True)
+        try:
+            await option.first.wait_for(state="visible", timeout=5_000)
+        except Exception:  # noqa: BLE001
+            # Try the Menu variant (role=menuitem) or any text in popper.
+            option = page.get_by_role("menuitem", name=option_text, exact=True)
+            try:
+                await option.first.wait_for(state="visible", timeout=2_000)
+            except Exception:  # noqa: BLE001
+                option = page.locator(
+                    ".MuiPopover-root, .MuiPopper-root"
+                ).locator(f'text="{option_text}"').first
+                try:
+                    await option.wait_for(state="visible", timeout=2_000)
+                except Exception as e:  # noqa: BLE001
+                    # Dump what IS in the open popover so we know the
+                    # actual label text and can tune the mapping table.
+                    visible = await page.locator(
+                        '.MuiPopover-root, .MuiPopper-root'
+                    ).locator(
+                        'li, [role="option"], [role="menuitem"]'
+                    ).all_text_contents()
+                    visible = [v.strip() for v in visible if v.strip()]
+                    await page.keyboard.press("Escape")  # cleanup
+                    raise PortalParseError(
+                        f"AD Mortgage dropdown (test_id={field_testid!r}) "
+                        f"has no option {option_text!r}. "
+                        f"Visible options: {visible}"
+                    ) from e
+
         await option.first.click()
 
-        # Critical: wait for the popover + backdrop to fully detach before
-        # returning, otherwise the next _pick() will fail with
-        # 'MuiBackdrop subtree intercepts pointer events'.
+        # Wait for the modal backdrop to fully detach so the next _pick()
+        # click isn't intercepted by a stale popover.
         try:
-            await page.wait_for_selector(
-                ".MuiPopover-root", state="detached", timeout=3_000,
-            )
+            await page.locator(
+                ".MuiBackdrop-root.MuiModal-backdrop"
+            ).first.wait_for(state="detached", timeout=3_000)
         except Exception:  # noqa: BLE001
-            # If MUI ever leaves it cached/hidden rather than detached,
-            # press Escape to force-close so we don't deadlock the run.
             await page.keyboard.press("Escape")
             await page.wait_for_timeout(200)
 
