@@ -362,58 +362,100 @@ class AdMortgageAdapter(PortalAdapter):
         )
 
     async def _scrape_adjustments(self, page: Any) -> list[Adjustment]:
-        """Read the Adjustments DataGrid that appears below the rate ladder
-        after the user (or our automation) clicks a rate row.
+        """Read the Adjustments DataGrid that appears below the rate ladder.
 
-        The DOM is roughly:
-            <Stack>
-              <span>Adjustments:</span>
-              <DataGrid>
-                <row><cell>Description</cell><cell>Rate</cell><cell>Price</cell></row>
-                ...
-                <row><cell>Total</cell><cell>0</cell><cell>-0.625</cell></row>
-              </DataGrid>
-            </Stack>
+        We must index by COLUMN HEADER ("Description" / "Price"), not by
+        cell position, because the DataGrid may carry extra slots
+        (selection checkbox, expand toggle, action button) on either end
+        of the visible row. cells[last] used to be the price column when
+        the grid had 3 visible columns; once a 4th slot appeared the
+        scrape silently picked up the wrong value (e.g., -0.125 instead
+        of -0.875, a 0.750 mismatch the user spotted).
 
-        We walk the DataGrid that is closest to the 'Adjustments:' label,
-        extract each row's first (label) and last (price) cells, and skip
-        the 'Total' summary row.
+        Returns a structured list with full debug context so callers can
+        log what the DOM actually looked like if a future schema change
+        breaks indexing.
         """
-        rows_json = await page.evaluate(
+        scrape: dict[str, Any] = await page.evaluate(  # pyright: ignore[reportAny]
             """() => {
-                // Find the span/div whose text is exactly 'Adjustments:' (the label)
+                // Locate the 'Adjustments:' label cell.
                 const label = Array.from(document.querySelectorAll('span,div'))
                   .find(el => (el.textContent || '').trim() === 'Adjustments:'
                               && el.children.length === 0);
-                if (!label) return null;
-                // Walk up until we find an ancestor that contains a DataGrid
+                if (!label) return {error: "no Adjustments: label found"};
+
+                // Walk up until we find the nearest MUI DataGrid descendant.
                 let host = label.parentElement;
                 let grid = null;
                 while (host && !grid) {
                   grid = host.querySelector('.MuiDataGrid-root');
                   host = host.parentElement;
                 }
-                if (!grid) return null;
-                // Each row contributes 3 gridcells: [Description, Rate, Price]
-                const rows = Array.from(grid.querySelectorAll('[role="row"]'));
+                if (!grid) return {error: "no MuiDataGrid-root near Adjustments:"};
+
+                // Find the column index for 'Description' and 'Price' by
+                // reading the column headers (role=columnheader).
+                const headers = Array.from(grid.querySelectorAll('[role="columnheader"]'));
+                const headerTexts = headers.map(h => (h.textContent || '').trim());
+                let descIdx = headerTexts.findIndex(t => /^description$/i.test(t));
+                let priceIdx = headerTexts.findIndex(t => /^price$/i.test(t));
+                // Fallback: if columnheader role isn't used, look for
+                // a header row inside row[aria-rowindex=1].
+                if (descIdx < 0 || priceIdx < 0) {
+                  const headerRow = grid.querySelector('[role="row"][aria-rowindex="1"]')
+                    || grid.querySelector('[role="row"]');
+                  if (headerRow) {
+                    const hcells = Array.from(
+                      headerRow.querySelectorAll('[role="columnheader"], [role="gridcell"]')
+                    );
+                    const htexts = hcells.map(h => (h.textContent || '').trim());
+                    if (descIdx < 0)  descIdx = htexts.findIndex(t => /^description$/i.test(t));
+                    if (priceIdx < 0) priceIdx = htexts.findIndex(t => /^price$/i.test(t));
+                  }
+                }
+
+                // Collect every data row (skipping the header row).
+                const rows = Array.from(grid.querySelectorAll('[role="row"]'))
+                  .filter(r => r.getAttribute('aria-rowindex') !== '1');
                 const out = [];
+                const dumps = [];
                 for (const r of rows) {
                   const cells = Array.from(r.querySelectorAll('[role="gridcell"]'));
-                  if (cells.length < 3) continue;
-                  const label = (cells[0].textContent || '').trim();
-                  const price = (cells[cells.length - 1].textContent || '').trim();
-                  if (!label || !price) continue;
-                  out.push({label, price});
+                  const texts = cells.map(c => (c.textContent || '').trim());
+                  dumps.push(texts);
+                  if (cells.length === 0) continue;
+                  let labelText, priceText;
+                  if (descIdx >= 0 && priceIdx >= 0
+                      && descIdx < cells.length && priceIdx < cells.length) {
+                    labelText = texts[descIdx];
+                    priceText = texts[priceIdx];
+                  } else {
+                    // Last-resort positional fallback: assume 3-col layout
+                    // (Description, Rate, Price). Better than nothing.
+                    labelText = texts[0] || '';
+                    priceText = texts[texts.length - 1] || '';
+                  }
+                  if (!labelText || !priceText) continue;
+                  out.push({label: labelText, price: priceText});
                 }
-                return out;
+                return {rows: out, headerTexts, descIdx, priceIdx, rowDumps: dumps};
             }"""
         )
+        if not scrape or scrape.get("error"):
+            return []
+        # One-line breadcrumb for live debugging.
+        print(
+            f"[ad_mortgage] adjustments scrape: headers={scrape.get('headerTexts')} "
+            f"desc_idx={scrape.get('descIdx')} price_idx={scrape.get('priceIdx')} "
+            f"rows={scrape.get('rowDumps')}"
+        )
+        rows_json: list[dict[str, str]] = scrape.get("rows") or []
         if not rows_json:
             return []
         items: list[Adjustment] = []
         for r in rows_json:
-            label = r.get("label", "").strip()
-            price_str = r.get("price", "").strip()
+            label = str(r.get("label") or "").strip()
+            price_str = str(r.get("price") or "").strip()
             if not label or not price_str:
                 continue
             if label.lower() == "total":
