@@ -140,11 +140,62 @@ class AdMortgageAdapter(PortalAdapter):
         await self._pick(page, _FIELD_TESTID_PROGRAM_TYPE, "Standard")
         await self._pick(page, _FIELD_TESTID_LOAN_TERM, "30 Year Fixed")
 
-        # ----- Numeric inputs -----
+        # DTI is a separate text input; portal expects an integer percent.
+        await self._fill_if_present(page, "DTI", str(scenario.debt_to_income))
+
+        # ----- Checkboxes from scenario (BEFORE numeric inputs so the
+        #       final FICO/Loan/CLTV fill triggers exactly one recalc) -----
+        # Portal label    | Scenario field          | Direction
+        # ----------------|-------------------------|-----------------
+        # Escrow Waiver   | not scenario.impounds   | inverted
+        # FTHB            | first_time_home_buyer   | direct
+        # Sub Financing   | has_equity_loan         | direct
+        # Admin Fee Buyout| waive_lender_fee        | direct
+        await self._toggle_if_present(page, "Escrow Waiver", not scenario.impounds)
+        await self._toggle_if_present(page, "FTHB", scenario.first_time_home_buyer)
+        await self._toggle_if_present(page, "Sub Financing", scenario.has_equity_loan)
+        await self._toggle_if_present(page, "Admin Fee Buyout", scenario.waive_lender_fee)
+        # self_employed has no portal equivalent on the Conventional QPP form.
+
+        # ----- Numeric inputs LAST so the final recalc is the only one
+        #       that has to settle before submit() waits for the rate panel.
         await page.get_by_role("textbox", name="FICO").fill(str(scenario.credit_score))
         await page.get_by_role("textbox", name="FICO").press("Enter")
         await page.get_by_role("textbox", name="Loan Amount").fill(str(int(scenario.loan_amount)))
         await page.get_by_role("textbox", name="CLTV").fill(str(int(scenario.ltv)))
+
+    async def _fill_if_present(self, page: Any, label: str, value: str) -> None:
+        """Fill a textbox by accessible name, no-op if not on the page."""
+        box = page.get_by_role("textbox", name=label)
+        if await box.count() > 0:
+            try:
+                await box.first.fill(value)
+            except Exception:  # noqa: BLE001
+                pass  # field exists but is disabled / read-only
+
+    async def _toggle_if_present(
+        self, page: Any, label: str, desired_checked: bool,
+    ) -> None:
+        """Set a checkbox to the desired state by its accessible label.
+
+        Soft-fail: if the label can't be found, we just skip — different
+        loan-type tabs surface different checkboxes, so it's normal for
+        some toggles to be absent. The compare flow will still produce
+        a usable delta.
+        """
+        box = page.get_by_role("checkbox", name=label)
+        if await box.count() == 0:
+            return
+        try:
+            await box.first.set_checked(desired_checked)
+        except Exception:  # noqa: BLE001
+            # Fallback: read state and toggle by click if it differs.
+            try:
+                current = await box.first.is_checked()
+                if current != desired_checked:
+                    await box.first.click()
+            except Exception:  # noqa: BLE001
+                pass
 
     async def _pick(self, page: Any, field_testid: str, option_text: str) -> None:
         """Open a Quick Pricer Pro dropdown and click an option by text.
@@ -214,9 +265,20 @@ class AdMortgageAdapter(PortalAdapter):
         await page.wait_for_selector(
             '[data-testid="show-rate-stack"]', timeout=60_000,
         )
-        # Expand the rate ladder so gridcells become visible.
-        await page.get_by_test_id("show-rate-stack").first.click()
-        await page.wait_for_selector('[role="gridcell"]', timeout=20_000)
+        # Expand the rate ladder so gridcells become visible. Retry the
+        # click + wait once because checkbox-driven recalcs can collapse
+        # the stack mid-flight.
+        for attempt in range(2):
+            await page.get_by_test_id("show-rate-stack").first.click()
+            try:
+                await page.wait_for_selector(
+                    '[role="gridcell"]', timeout=30_000,
+                )
+                break
+            except Exception:  # noqa: BLE001
+                if attempt == 1:
+                    raise
+                await page.wait_for_timeout(1500)
         # Brief settle to let virtualized rows render.
         await page.wait_for_timeout(800)
 
