@@ -32,7 +32,19 @@ class LoanType(StrEnum):
     CONVENTIONAL = "conventional"
 
 
+class AttachmentType(StrEnum):
+    """For condos / PUDs: detached vs. attached structure."""
+    DETACHED = "detached"
+    ATTACHED = "attached"
+
+
+class CompensationType(StrEnum):
+    BORROWER_PAID = "borrower_paid"
+    LENDER_PAID = "lender_paid"
+
+
 class Scenario(BaseModel):
+    # ----- Loan basics (all required) -----
     loan_amount: Decimal = Field(gt=0)
     credit_score: int = Field(ge=300, le=850)
     property_value: Decimal = Field(gt=0)
@@ -43,6 +55,32 @@ class Scenario(BaseModel):
     loan_program: str
     loan_type: LoanType
     target_rate: Decimal = Field(gt=0, le=Decimal("30"))
+
+    # ----- Location -----
+    state: str = "VA"
+    zip: str = "20155"
+    county_name: str = "Prince William"
+
+    # ----- Borrower profile -----
+    debt_to_income: int = Field(default=40, ge=0, le=100)
+    first_time_home_buyer: bool = False
+    has_self_employed: bool = False
+    total_number_properties: int = Field(default=1, ge=1, le=20)
+    financed_properties: int = Field(default=1, ge=1, le=20)
+
+    # ----- Property detail -----
+    actual_number_of_units: int = Field(default=1, ge=1, le=4)
+    attachment_type: AttachmentType = AttachmentType.DETACHED
+
+    # ----- Loan pricing options -----
+    lock_period: int = Field(default=30, ge=15, le=90)  # days
+    impounds: bool = True
+    has_equity_loan: bool = False
+    waive_lender_fee: bool = False
+
+    # ----- Broker compensation -----
+    compensation_type: CompensationType = CompensationType.BORROWER_PAID
+    borrower_paid_compensation: Decimal = Field(default=Decimal("1.0"), ge=0, le=10)
 
 
 class Adjustment(BaseModel):

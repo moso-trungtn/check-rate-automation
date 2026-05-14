@@ -58,16 +58,26 @@
         <div class="cr-card-body">
           <form id="scenario-form" autocomplete="off" novalidate>
 
+            <!-- ===== Lender ===== -->
             <div class="section">
               <p class="section-title">Lender</p>
-              <select class="form-select" id="lender" name="lender" aria-label="Lender">
+              <select class="form-select form-select-sm" id="lender" name="lender" aria-label="Lender">
                 <option value="ad_mortgage">AD Mortgage</option>
               </select>
             </div>
 
+            <!-- ===== Loan basics ===== -->
             <div class="section">
-              <p class="section-title">Loan</p>
+              <p class="section-title">Loan basics</p>
               <div class="row g-2">
+                <div class="col-12">
+                  <label for="purpose" class="form-label">Purpose</label>
+                  <select id="purpose" name="purpose" class="form-select form-select-sm">
+                    <option value="purchase">Purchase</option>
+                    <option value="refinance">Refinance</option>
+                    <option value="cashout">Cash-out</option>
+                  </select>
+                </div>
                 <div class="col-12">
                   <label for="loan_amount" class="form-label">Loan amount</label>
                   <div class="input-group input-group-sm">
@@ -105,38 +115,146 @@
                   <label for="loan_program" class="form-label">Program</label>
                   <input id="loan_program" type="text" name="loan_program" class="form-control form-control-sm" value="30yr Fixed Conv">
                 </div>
+                <input type="hidden" name="loan_type" value="conventional">
               </div>
             </div>
 
+            <!-- ===== Property ===== -->
             <div class="section">
-              <p class="section-title">Property &amp; purpose</p>
+              <p class="section-title">Property</p>
               <div class="row g-2">
                 <div class="col-12">
                   <label for="occupancy" class="form-label">Occupancy</label>
                   <select id="occupancy" name="occupancy" class="form-select form-select-sm">
-                    <option value="primary_residence">Primary</option>
+                    <option value="primary_residence">Primary residence</option>
                     <option value="second_home">Second home</option>
                     <option value="investment">Investment</option>
                   </select>
                 </div>
                 <div class="col-12">
                   <label for="property_type" class="form-label">Property type</label>
-                  <select id="property_type" name="property_type" class="form-select form-select-sm">
+                  <select id="property_type" name="property_type" class="form-select form-select-sm" onchange="updateConditionalFields()">
                     <option value="single_family">Single family</option>
                     <option value="condo">Condo</option>
                     <option value="pud">PUD</option>
                     <option value="2_to_4_unit">2-4 unit</option>
                   </select>
                 </div>
-                <div class="col-12">
-                  <label for="purpose" class="form-label">Purpose</label>
-                  <select id="purpose" name="purpose" class="form-select form-select-sm">
-                    <option value="purchase">Purchase</option>
-                    <option value="refinance">Refinance</option>
-                    <option value="cashout">Cash-out</option>
+                <div class="col-6">
+                  <label for="actual_number_of_units" class="form-label">Units</label>
+                  <select id="actual_number_of_units" name="actual_number_of_units" class="form-select form-select-sm">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
                   </select>
                 </div>
-                <input type="hidden" name="loan_type" value="conventional">
+                <div class="col-6" id="attachment-field" hidden>
+                  <label for="attachment_type" class="form-label">Attachment</label>
+                  <select id="attachment_type" name="attachment_type" class="form-select form-select-sm">
+                    <option value="detached">Detached</option>
+                    <option value="attached">Attached</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Location ===== -->
+            <div class="section">
+              <p class="section-title">Location</p>
+              <div class="row g-2">
+                <div class="col-4">
+                  <label for="state" class="form-label">State</label>
+                  <input id="state" type="text" name="state" class="form-control form-control-sm" value="VA" maxlength="2" style="text-transform: uppercase;">
+                </div>
+                <div class="col-8">
+                  <label for="zip" class="form-label">ZIP</label>
+                  <input id="zip" type="text" name="zip" class="form-control form-control-sm" value="20155" maxlength="5">
+                </div>
+                <div class="col-12">
+                  <label for="county_name" class="form-label">County</label>
+                  <input id="county_name" type="text" name="county_name" class="form-control form-control-sm" value="Prince William">
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Borrower ===== -->
+            <div class="section">
+              <p class="section-title">Borrower</p>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label for="debt_to_income" class="form-label">DTI</label>
+                  <div class="input-group input-group-sm">
+                    <input id="debt_to_income" type="number" name="debt_to_income" class="form-control" value="40" min="0" max="100">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <label for="financed_properties" class="form-label">Financed</label>
+                  <input id="financed_properties" type="number" name="financed_properties" class="form-control form-control-sm" value="1" min="1" max="20">
+                </div>
+                <div class="col-12 mt-2">
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="checkbox" id="first_time_home_buyer" name="first_time_home_buyer">
+                    <label class="form-check-label" for="first_time_home_buyer">First-time home buyer</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="checkbox" id="has_self_employed" name="has_self_employed">
+                    <label class="form-check-label" for="has_self_employed">Self-employed</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Loan options ===== -->
+            <div class="section">
+              <p class="section-title">Loan options</p>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label for="lock_period" class="form-label">Lock period (days)</label>
+                  <select id="lock_period" name="lock_period" class="form-select form-select-sm">
+                    <option value="15">15</option>
+                    <option value="30" selected>30</option>
+                    <option value="45">45</option>
+                    <option value="60">60</option>
+                    <option value="90">90</option>
+                  </select>
+                </div>
+                <div class="col-12 mt-2">
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="checkbox" id="impounds" name="impounds" checked>
+                    <label class="form-check-label" for="impounds">Impounds (escrow)</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="checkbox" id="has_equity_loan" name="has_equity_loan">
+                    <label class="form-check-label" for="has_equity_loan">Has equity loan / subordinate financing</label>
+                  </div>
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input" type="checkbox" id="waive_lender_fee" name="waive_lender_fee">
+                    <label class="form-check-label" for="waive_lender_fee">Waive lender fee</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Compensation ===== -->
+            <div class="section">
+              <p class="section-title">Compensation</p>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label for="compensation_type" class="form-label">Type</label>
+                  <select id="compensation_type" name="compensation_type" class="form-select form-select-sm" onchange="updateConditionalFields()">
+                    <option value="borrower_paid">Borrower paid</option>
+                    <option value="lender_paid">Lender paid</option>
+                  </select>
+                </div>
+                <div class="col-12" id="comp-amount-field">
+                  <label for="borrower_paid_compensation" class="form-label">Compensation amount</label>
+                  <div class="input-group input-group-sm">
+                    <input id="borrower_paid_compensation" type="number" step="0.01" name="borrower_paid_compensation" class="form-control" value="1.0" min="0" max="10">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -515,12 +633,32 @@ function renderError(step, message) {
 }
 
 // ============== Compare flow ==============
+function isChecked(name) {
+  const el = document.querySelector(`input[name="${name}"]`);
+  return el ? el.checked : false;
+}
+
+function updateConditionalFields() {
+  // Attachment type only matters for Condo (PUD already implies single
+  // family; the API still accepts the field).
+  const propertyType = document.getElementById('property_type').value;
+  const attachField = document.getElementById('attachment-field');
+  if (attachField) attachField.hidden = (propertyType !== 'condo');
+  // Compensation amount only applies for borrower-paid.
+  const compType = document.getElementById('compensation_type').value;
+  const compAmountField = document.getElementById('comp-amount-field');
+  if (compAmountField) compAmountField.hidden = (compType !== 'borrower_paid');
+}
+
 async function startCompare() {
   const form = document.getElementById('scenario-form');
   const data = Object.fromEntries(new FormData(form));
+  // The state field is uppercased visually but we send the value as-is.
+  const stateVal = (data.state || '').toUpperCase();
   const payload = {
     lender: data.lender,
     scenario: {
+      // basics
       loan_amount:    Number(data.loan_amount),
       credit_score:   Number(data.credit_score),
       property_value: Number(data.property_value),
@@ -531,6 +669,27 @@ async function startCompare() {
       loan_program:   data.loan_program,
       loan_type:      data.loan_type,
       target_rate:    Number(data.target_rate),
+      // location
+      state:          stateVal,
+      zip:            data.zip,
+      county_name:    data.county_name,
+      // borrower
+      debt_to_income:        Number(data.debt_to_income),
+      first_time_home_buyer: isChecked('first_time_home_buyer'),
+      has_self_employed:     isChecked('has_self_employed'),
+      financed_properties:   Number(data.financed_properties || 1),
+      total_number_properties: Number(data.financed_properties || 1),  // mirror for now
+      // property
+      actual_number_of_units: Number(data.actual_number_of_units || 1),
+      attachment_type:        data.attachment_type || 'detached',
+      // loan options
+      lock_period:      Number(data.lock_period),
+      impounds:         isChecked('impounds'),
+      has_equity_loan:  isChecked('has_equity_loan'),
+      waive_lender_fee: isChecked('waive_lender_fee'),
+      // compensation
+      compensation_type:           data.compensation_type,
+      borrower_paid_compensation:  Number(data.borrower_paid_compensation),
     },
   };
 
@@ -719,8 +878,12 @@ async function saveMosoSession() {
   }
 }
 
-// On load: probe session status to color the indicator dot.
-document.addEventListener('DOMContentLoaded', refreshSessionStatus);
+// On load: probe session status to color the indicator dot, and
+// initialize conditional field visibility (Attachment / Comp amount).
+document.addEventListener('DOMContentLoaded', () => {
+  refreshSessionStatus();
+  updateConditionalFields();
+});
 </script>
 </body>
 </html>
