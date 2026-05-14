@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 from playwright.async_api import async_playwright
 
 import app.portals.ad_mortgage  # noqa: F401  # pyright: ignore[reportUnusedImport]  — register adapter
+import app.portals.sunwest  # noqa: F401  # pyright: ignore[reportUnusedImport]  — register adapter
 from app.config import Settings
 from app.events.bus import EventBus
 from app.mfa.bridge import MfaBridge
@@ -29,8 +30,14 @@ from app.routes.mfa import router as mfa_router
 from app.routes.moso_session import router as moso_session_router
 from app.secrets.store import CredentialsStore
 
-LENDER_IDS: dict[str, int] = {"ad_mortgage": 61}
-LENDER_ALIASES: dict[str, str] = {"ad_mortgage": "AD Mortgage"}
+LENDER_IDS: dict[str, int] = {
+    "ad_mortgage": 61,
+    "sunwest": 95,  # SunWest at line 96 (1-indexed) of LenderType.java
+}
+LENDER_ALIASES: dict[str, str] = {
+    "ad_mortgage": "AD Mortgage",
+    "sunwest": "Sun West MC Rate Sheet",  # TODO: confirm exact MOSO alias live
+}
 
 
 def create_app() -> FastAPI:
